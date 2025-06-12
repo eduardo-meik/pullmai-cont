@@ -1,6 +1,6 @@
 import React from 'react'
 import { Outlet } from 'react-router-dom'
-import DashNavbar from '../DashNavbar'
+import DashNavbar from '../Components/DashNavbar'
 import Sidebar from './Sidebar'
 
 const DashboardLayout: React.FC = () => {
