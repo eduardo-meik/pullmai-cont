@@ -54,6 +54,10 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
     return currentUser.updatePassword(password)
   }
 
+  function getCurrentUserToken(): Promise<string | null> {
+    return currentUser ? currentUser.getIdToken() : Promise.resolve(null)
+  }
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setCurrentUser(user)
@@ -73,6 +77,7 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
     resetPassword,
     updateEmail,
     updatePassword,
+    getCurrentUserToken,
   }
 
   return (
