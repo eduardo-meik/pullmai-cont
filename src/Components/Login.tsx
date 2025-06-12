@@ -1,4 +1,4 @@
-import ModernLogin from './auth/ModernLogin'
+import ModernLogin from '../components/auth/ModernLogin'
 
 export default function Login() {
   return <ModernLogin />
