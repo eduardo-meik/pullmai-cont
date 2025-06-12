@@ -6,7 +6,7 @@ import Button from '../ui/Button'
 import SocialButton from '../ui/SocialButton'
 import PasswordStrength from '../ui/PasswordStrength'
 import { useAuth } from '../../contexts/AuthContext'
-import { ETypes, MessageCard } from '../Atoms/MessageCard'
+import { ETypes, MessageCard } from '../../Components/Atoms/MessageCard'
 
 interface FormErrors {
   email?: string
