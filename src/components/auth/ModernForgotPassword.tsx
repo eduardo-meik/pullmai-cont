@@ -4,7 +4,7 @@ import { EnvelopeIcon, ArrowLeftIcon, CheckCircleIcon } from '@heroicons/react/2
 import Input from '../ui/Input'
 import Button from '../ui/Button'
 import { useAuth } from '../../contexts/AuthContext'
-import { ETypes, MessageCard } from '../Atoms/MessageCard'
+import { ETypes, MessageCard } from '../../Components/Atoms/MessageCard'
 
 interface FormErrors {
   email?: string
