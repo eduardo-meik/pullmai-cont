@@ -1,8 +1,9 @@
+@import './styles/colors.css';
+@import './styles/typography.css';
+@import './styles/animations.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* Importar estilos personalizados */
-@import './styles/colors.css';
-@import './styles/typography.css';
-@import './styles/animations.css';
