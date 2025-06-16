@@ -35,10 +35,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               </div>
             </div>
           )}
-          
-          <input
+            <input
             ref={ref}
-            type={inputType}
             className={`
               block w-full px-3 py-2.5 
               ${icon ? 'pl-10' : ''} 
@@ -60,18 +58,21 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             onBlur={(e) => {
               setIsFocused(false)
               props.onBlur?.(e)
-            }}
+            }            }
             aria-invalid={error ? 'true' : 'false'}
             aria-describedby={
               error ? `${props.id}-error` : 
               helperText ? `${props.id}-helper` : undefined
             }
-            {...props}
-          />          {showPasswordToggle && (
+            {...{ ...props, type: inputType }}
+          />
+          
+          {showPasswordToggle && (
             <button
               type="button"
-              className="absolute inset-y-0 right-0 pr-3 flex items-center z-10 cursor-pointer bg-transparent border-0 hover:bg-gray-50 hover:bg-opacity-50 rounded-r-lg"
-              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center z-10 cursor-pointer bg-transparent border-0 hover:bg-gray-50 hover:bg-opacity-50 rounded-r-lg"              onClick={() => {
+                setShowPassword(prev => !prev)
+              }}
               tabIndex={-1}
               aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             >
