@@ -10,6 +10,7 @@ import {
   sendPasswordResetEmail,
   updateEmail as firebaseUpdateEmail,
   updatePassword as firebaseUpdatePassword,
+  updateProfile,
   onAuthStateChanged,
   User
 } from 'firebase/auth'
@@ -26,6 +27,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>
   updateEmail: (email: string) => Promise<void>
   updatePassword: (password: string) => Promise<void>
+  updateUserProfile: (profile: { displayName?: string; photoURL?: string }) => Promise<void>
   googleSignin: () => Promise<any>
   githubSignin: () => Promise<any>
   getCurrentUserToken: () => Promise<string | null>
@@ -75,10 +77,14 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
     if (!currentUser) throw new Error('No user is currently signed in')
     return firebaseUpdateEmail(currentUser, email)
   }
-
   function updatePassword(password: string): Promise<void> {
     if (!currentUser) throw new Error('No user is currently signed in')
     return firebaseUpdatePassword(currentUser, password)
+  }
+
+  function updateUserProfile(profile: { displayName?: string; photoURL?: string }): Promise<void> {
+    if (!currentUser) throw new Error('No user is currently signed in')
+    return updateProfile(currentUser, profile)
   }
 
   function getCurrentUserToken(): Promise<string | null> {
@@ -93,7 +99,6 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
 
     return unsubscribe
   }, [])
-
   const value: AuthContextType = {
     currentUser,
     login,
@@ -104,6 +109,7 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
     resetPassword,
     updateEmail,
     updatePassword,
+    updateUserProfile,
     getCurrentUserToken,
   }
 
