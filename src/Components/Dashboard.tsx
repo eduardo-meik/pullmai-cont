@@ -1,5 +1,5 @@
 import React from 'react'
-import DashboardStats from './dashboard/DashboardStats'
+import DashboardStats from './dashboard/DashboardStats';
 import ContractList from './contracts/ContractList'
 
 export default function Dashboard() {
