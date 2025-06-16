@@ -67,20 +67,18 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               helperText ? `${props.id}-helper` : undefined
             }
             {...props}
-          />
-          
-          {showPasswordToggle && (
+          />          {showPasswordToggle && (
             <button
               type="button"
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center z-10 cursor-pointer bg-transparent border-0 hover:bg-gray-50 hover:bg-opacity-50 rounded-r-lg"
               onClick={() => setShowPassword(!showPassword)}
               tabIndex={-1}
               aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             >
               {showPassword ? (
-                <EyeSlashIcon className="h-5 w-5 text-neutral-400 hover:text-neutral-600 transition-colors" />
+                <EyeSlashIcon className="h-5 w-5 text-gray-500 hover:text-gray-700 transition-colors" />
               ) : (
-                <EyeIcon className="h-5 w-5 text-neutral-400 hover:text-neutral-600 transition-colors" />
+                <EyeIcon className="h-5 w-5 text-gray-500 hover:text-gray-700 transition-colors" />
               )}
             </button>
           )}
