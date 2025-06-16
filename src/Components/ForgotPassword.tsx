@@ -1,4 +1,4 @@
-import ModernForgotPassword from '../components/auth/ModernForgotPassword'
+import ModernForgotPassword from './auth/ModernForgotPassword'
 
 export default function ForgotPassword() {
   return <ModernForgotPassword />
