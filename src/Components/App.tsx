@@ -9,8 +9,8 @@ import PrivateRoutes from './PrivateRoutes'
 import ForgotPassword from './ForgotPassword'
 import UpdateProfile from './UpdateProfile'
 import Projects from './Projects'
-import ContractList from '../components/contracts/ContractList'
-import DashboardLayout from '../components/layout/DashboardLayout'
+import ContractList from './contracts/ContractList' // Corrected import path
+import DashboardLayout from './layout/DashboardLayout' // Corrected import path
 import { ToastProvider } from '../contexts/ToastContext'
 import { ApiProvider } from '../contexts/ApiContext'
 import 'react-toastify/dist/ReactToastify.min.css'
