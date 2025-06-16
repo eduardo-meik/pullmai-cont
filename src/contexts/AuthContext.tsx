@@ -4,24 +4,49 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   GithubAuthProvider,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail,
+  updateEmail as firebaseUpdateEmail,
+  updatePassword as firebaseUpdatePassword,
+  onAuthStateChanged,
+  User
 } from 'firebase/auth'
 
 interface IAuthProviderProps {
   children: JSX.Element
 }
 
-const AuthContext = React.createContext({})
+interface AuthContextType {
+  currentUser: User | null
+  signup: (email: string, password: string) => Promise<any>
+  login: (email: string, password: string) => Promise<any>
+  logout: () => Promise<void>
+  resetPassword: (email: string) => Promise<void>
+  updateEmail: (email: string) => Promise<void>
+  updatePassword: (password: string) => Promise<void>
+  googleSignin: () => Promise<any>
+  githubSignin: () => Promise<any>
+  getCurrentUserToken: () => Promise<string | null>
+}
 
-export function useAuth(): any {
-  return useContext(AuthContext)
+const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
+
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
 }
 
 export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
-  const [currentUser, setCurrentUser] = useState<any>()
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   function signup(email: string, password: string): Promise<any> {
-    return auth.createUserWithEmailAndPassword(email, password)
+    return createUserWithEmailAndPassword(auth, email, password)
   }
 
   function googleSignin(): Promise<any> {
@@ -35,23 +60,25 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
   }
 
   function login(email: string, password: string): Promise<any> {
-    return auth.signInWithEmailAndPassword(email, password)
+    return signInWithEmailAndPassword(auth, email, password)
   }
 
-  function logout(): Promise<any> {
-    return auth.signOut()
+  function logout(): Promise<void> {
+    return signOut(auth)
   }
 
-  function resetPassword(email: string): Promise<any> {
-    return auth.sendPasswordResetEmail(email)
+  function resetPassword(email: string): Promise<void> {
+    return sendPasswordResetEmail(auth, email)
   }
 
-  function updateEmail(email: string): Promise<any> {
-    return currentUser.updateEmail(email)
+  function updateEmail(email: string): Promise<void> {
+    if (!currentUser) throw new Error('No user is currently signed in')
+    return firebaseUpdateEmail(currentUser, email)
   }
 
-  function updatePassword(password: string): Promise<any> {
-    return currentUser.updatePassword(password)
+  function updatePassword(password: string): Promise<void> {
+    if (!currentUser) throw new Error('No user is currently signed in')
+    return firebaseUpdatePassword(currentUser, password)
   }
 
   function getCurrentUserToken(): Promise<string | null> {
@@ -59,7 +86,7 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
   }
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user)
       setLoading(false)
     })
@@ -67,7 +94,7 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
     return unsubscribe
   }, [])
 
-  const value = {
+  const value: AuthContextType = {
     currentUser,
     login,
     signup,

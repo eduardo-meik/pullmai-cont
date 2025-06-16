@@ -1,5 +1,3 @@
-import firebase from 'firebase/compat/app'
-import 'firebase/compat/auth'
 import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
@@ -15,14 +13,12 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_MEASUREMENT_ID,
 }
 
-// Firebase v9+ setup
+// Initialize Firebase
 const app = initializeApp(firebaseConfig)
+
+// Initialize Firebase services
 export const db = getFirestore(app)
 export const storage = getStorage(app)
 export const auth = getAuth(app)
 
-// Firebase compat para compatibilidad con código existente
-const compatApp = firebase.initializeApp(firebaseConfig, 'compat')
-
-export const compatAuth = compatApp.auth()
-export default compatApp
+export default app
