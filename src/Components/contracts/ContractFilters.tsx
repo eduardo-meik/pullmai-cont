@@ -2,8 +2,9 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useContractStore } from '../../stores/contractStore'
-import { EstadoContrato, TipoContrato } from '../../types'
+import { EstadoContrato, CategoriaContrato, TipoEconomico, Periodicidad } from '../../types'
 import Button from '../ui/Button'
+import Input from '../ui/Input'
 
 const ContractFilters: React.FC = () => {
   const { filtros, setFiltros, clearFiltros } = useContractStore()
@@ -17,15 +18,24 @@ const ContractFilters: React.FC = () => {
     { value: EstadoContrato.CANCELADO, label: 'Cancelado' },
     { value: EstadoContrato.RENOVADO, label: 'Renovado' }
   ]
+  const categoriasContrato = [
+    { value: CategoriaContrato.SERVICIOS, label: 'Servicios' },
+    { value: CategoriaContrato.COMPRAS, label: 'Compras' },
+    { value: CategoriaContrato.VENTAS, label: 'Ventas' },
+    { value: CategoriaContrato.ARRENDAMIENTO, label: 'Arrendamiento' },
+    { value: CategoriaContrato.LABORAL, label: 'Laboral' },
+    { value: CategoriaContrato.CONFIDENCIALIDAD, label: 'Confidencialidad' },
+    { value: CategoriaContrato.CONSULTORIA, label: 'Consultoría' },
+    { value: CategoriaContrato.MANTENIMIENTO, label: 'Mantenimiento' },
+    { value: CategoriaContrato.SUMINISTRO, label: 'Suministro' },
+    { value: CategoriaContrato.OTRO, label: 'Otro' }
+  ]
 
-  const tiposContrato = [
-    { value: TipoContrato.SERVICIO, label: 'Servicio' },
-    { value: TipoContrato.COMPRA, label: 'Compra' },
-    { value: TipoContrato.VENTA, label: 'Venta' },
-    { value: TipoContrato.CONFIDENCIALIDAD, label: 'Confidencialidad' },
-    { value: TipoContrato.LABORAL, label: 'Laboral' },
-    { value: TipoContrato.ARRENDAMIENTO, label: 'Arrendamiento' },
-    { value: TipoContrato.OTRO, label: 'Otro' }
+  const tiposEconomicos = [
+    { value: TipoEconomico.COMPRA, label: 'Compra' },
+    { value: TipoEconomico.VENTA, label: 'Venta' },
+    { value: TipoEconomico.INGRESO, label: 'Ingreso' },
+    { value: TipoEconomico.EGRESO, label: 'Egreso' }
   ]
 
   const handleEstadoChange = (estado: EstadoContrato, checked: boolean) => {
@@ -36,14 +46,26 @@ const ContractFilters: React.FC = () => {
       setFiltros({ estado: estadosActuales.filter(e => e !== estado) })
     }
   }
+  const handleCategoriaChange = (categoria: CategoriaContrato, checked: boolean) => {
+    const categoriasActuales = filtros.categoria || []
+    if (checked) {
+      setFiltros({ categoria: [...categoriasActuales, categoria] })
+    } else {
+      setFiltros({ categoria: categoriasActuales.filter(c => c !== categoria) })
+    }
+  }
 
-  const handleTipoChange = (tipo: TipoContrato, checked: boolean) => {
+  const handleTipoEconomicoChange = (tipo: TipoEconomico, checked: boolean) => {
     const tiposActuales = filtros.tipo || []
     if (checked) {
       setFiltros({ tipo: [...tiposActuales, tipo] })
     } else {
       setFiltros({ tipo: tiposActuales.filter(t => t !== tipo) })
     }
+  }
+
+  const handleProyectoChange = (proyecto: string) => {
+    setFiltros({ proyecto: proyecto || undefined })
   }
 
   const tieneActivosFiltros = Object.keys(filtros).some(key => {
@@ -88,24 +110,51 @@ const ContractFilters: React.FC = () => {
               </label>
             ))}
           </div>
+        </div>        {/* Categorías */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">Categoría</h4>
+          <div className="space-y-2">
+            {categoriasContrato.map((categoria) => (
+              <label key={categoria.value} className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={filtros.categoria?.includes(categoria.value) || false}
+                  onChange={(e) => handleCategoriaChange(categoria.value, e.target.checked)}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-600">{categoria.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
-        {/* Tipos */}
+        {/* Tipos Económicos */}
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Tipo</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">Tipo Económico</h4>
           <div className="space-y-2">
-            {tiposContrato.map((tipo) => (
+            {tiposEconomicos.map((tipo) => (
               <label key={tipo.value} className="flex items-center">
                 <input
                   type="checkbox"
                   checked={filtros.tipo?.includes(tipo.value) || false}
-                  onChange={(e) => handleTipoChange(tipo.value, e.target.checked)}
+                  onChange={(e) => handleTipoEconomicoChange(tipo.value, e.target.checked)}
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 />
                 <span className="ml-2 text-sm text-gray-600">{tipo.label}</span>
               </label>
             ))}
           </div>
+        </div>        {/* Proyecto */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">Proyecto</h4>
+          <Input
+            label=""
+            type="text"
+            placeholder="Filtrar por proyecto..."
+            value={filtros.proyecto || ''}
+            onChange={(e) => handleProyectoChange(e.target.value)}
+            className="w-full"
+          />
         </div>
 
         {/* Fechas */}

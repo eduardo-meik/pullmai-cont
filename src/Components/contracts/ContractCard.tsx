@@ -11,7 +11,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Contrato, EstadoContrato, TipoContrato } from '../../types'
+import { Contrato, EstadoContrato, CategoriaContrato, TipoEconomico, Periodicidad } from '../../types'
 import Button from '../ui/Button'
 
 interface ContractCardProps {
@@ -32,18 +32,42 @@ const ContractCard: React.FC<ContractCardProps> = ({ contrato, onEliminar }) => 
     }
     return colores[estado] || 'bg-gray-100 text-gray-800 border-gray-200'
   }
-
-  const getTipoLabel = (tipo: TipoContrato) => {
+  const getCategoriaLabel = (categoria: CategoriaContrato) => {
     const labels = {
-      servicio: 'Servicio',
-      compra: 'Compra',
-      venta: 'Venta',
-      confidencialidad: 'Confidencialidad',
-      laboral: 'Laboral',
+      servicios: 'Servicios',
+      compras: 'Compras',
+      ventas: 'Ventas',
       arrendamiento: 'Arrendamiento',
+      laboral: 'Laboral',
+      confidencialidad: 'Confidencialidad',
+      consultoria: 'Consultoría',
+      mantenimiento: 'Mantenimiento',
+      suministro: 'Suministro',
       otro: 'Otro'
     }
+    return labels[categoria] || categoria
+  }
+
+  const getTipoEconomicoLabel = (tipo: TipoEconomico) => {
+    const labels = {
+      compra: 'Compra',
+      venta: 'Venta',
+      ingreso: 'Ingreso',
+      egreso: 'Egreso'
+    }
     return labels[tipo] || tipo
+  }
+
+  const getPeriodicidadLabel = (periodicidad: Periodicidad) => {
+    const labels = {
+      unico: 'Único',
+      mensual: 'Mensual',
+      trimestral: 'Trimestral',
+      semestral: 'Semestral',
+      anual: 'Anual',
+      bianual: 'Bianual'
+    }
+    return labels[periodicidad] || periodicidad
   }
 
   const getEstadoLabel = (estado: EstadoContrato) => {
@@ -59,10 +83,9 @@ const ContractCard: React.FC<ContractCardProps> = ({ contrato, onEliminar }) => 
     return labels[estado] || estado
   }
 
-  const isProximoVencer = () => {
-    const hoy = new Date()
+  const isProximoVencer = () => {    const hoy = new Date()
     const diasRestantes = Math.ceil(
-      (contrato.fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24)
+      (contrato.fechaTermino.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24)
     )
     return diasRestantes <= 30 && diasRestantes > 0
   }
@@ -83,7 +106,7 @@ const ContractCard: React.FC<ContractCardProps> = ({ contrato, onEliminar }) => 
               <h3 className="font-semibold text-gray-900 line-clamp-1">
                 {contrato.titulo}
               </h3>
-              <p className="text-sm text-gray-500">{getTipoLabel(contrato.tipo)}</p>
+              <p className="text-sm text-gray-500">{getCategoriaLabel(contrato.categoria)}</p>
             </div>
           </div>
           <div className="flex items-center space-x-1">
@@ -112,25 +135,43 @@ const ContractCard: React.FC<ContractCardProps> = ({ contrato, onEliminar }) => 
           <div className="flex items-center text-sm text-gray-500">
             <CalendarIcon className="h-4 w-4 mr-2" />
             <span>
-              Vence: {format(contrato.fechaVencimiento, 'dd MMM yyyy', { locale: es })}
+              Vence: {format(contrato.fechaTermino, 'dd MMM yyyy', { locale: es })}
             </span>
           </div>
-          
-          {contrato.valor && (
+            {contrato.monto && (
             <div className="flex items-center text-sm text-gray-500">
               <CurrencyDollarIcon className="h-4 w-4 mr-2" />
               <span>
                 {new Intl.NumberFormat('es-ES', {
                   style: 'currency',
                   currency: contrato.moneda || 'EUR'
-                }).format(contrato.valor)}
+                }).format(contrato.monto)}
               </span>
             </div>
-          )}
-
-          <div className="flex items-center text-sm text-gray-500">
+          )}          <div className="flex items-center text-sm text-gray-500">
             <UserIcon className="h-4 w-4 mr-2" />
             <span>{contrato.departamento}</span>
+          </div>
+
+          <div className="flex items-center text-sm text-gray-500">
+            <DocumentTextIcon className="h-4 w-4 mr-2" />
+            <span>Contraparte: {contrato.contraparte}</span>
+          </div>
+
+          <div className="flex items-center text-sm text-gray-500">
+            <DocumentTextIcon className="h-4 w-4 mr-2" />
+            <span>Proyecto: {contrato.proyecto}</span>
+          </div>
+
+          <div className="flex items-center text-sm text-gray-500">
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            <span>Periodicidad: {getPeriodicidadLabel(contrato.periodicidad)}</span>
+          </div>
+
+          <div className="flex items-center text-sm text-gray-500">
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {getTipoEconomicoLabel(contrato.tipo)}
+            </span>
           </div>
         </div>
 

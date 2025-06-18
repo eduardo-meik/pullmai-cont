@@ -20,22 +20,57 @@ export enum UserRole {
   USER = 'user'
 }
 
+// Nuevas enumeraciones para contratos
+export enum CategoriaContrato {
+  SERVICIOS = 'servicios',
+  COMPRAS = 'compras',
+  VENTAS = 'ventas',
+  ARRENDAMIENTO = 'arrendamiento',
+  LABORAL = 'laboral',
+  CONFIDENCIALIDAD = 'confidencialidad',
+  CONSULTORIA = 'consultoria',
+  MANTENIMIENTO = 'mantenimiento',
+  SUMINISTRO = 'suministro',
+  OTRO = 'otro'
+}
+
+export enum Periodicidad {
+  UNICO = 'unico',
+  MENSUAL = 'mensual',
+  TRIMESTRAL = 'trimestral',
+  SEMESTRAL = 'semestral',
+  ANUAL = 'anual',
+  BIANUAL = 'bianual'
+}
+
+export enum TipoEconomico {
+  COMPRA = 'compra',
+  VENTA = 'venta',
+  INGRESO = 'ingreso',
+  EGRESO = 'egreso'
+}
+
 export interface Contrato {
   id: string
   titulo: string
   descripcion: string
-  tipo: TipoContrato
+  contraparte: string // Nombre de la contraparte
+  fechaInicio: Date // Fecha de Inicio
+  fechaTermino: Date // Fecha de Termino (anteriormente fechaVencimiento)
+  monto: number // Monto del contrato
+  moneda: string // Moneda (USD, CLP, EUR, etc.)
+  pdfUrl: string // URL del PDF del contrato
+  categoria: CategoriaContrato // Categoría del contrato
+  periodicidad: Periodicidad // Frecuencia del contrato
+  tipo: TipoEconomico // Tipo económico (Compra/Venta, Ingreso/Egreso)
+  proyecto: string // Proyecto al que pertenece el contrato
+  
+  // Campos existentes mantenidos
   estado: EstadoContrato
   fechaCreacion: Date
-  fechaInicio: Date
-  fechaVencimiento: Date
-  valor?: number
-  moneda?: string
   organizacionId: string
   departamento: string
   responsableId: string
-  contraparteId?: string
-  documentoUrl?: string
   documentoNombre?: string
   documentoTamaño?: number
   version: number
@@ -44,6 +79,7 @@ export interface Contrato {
   auditoria: RegistroAuditoria[]
 }
 
+// Mantenido para compatibilidad con código existente
 export enum TipoContrato {
   SERVICIO = 'servicio',
   COMPRA = 'compra',
@@ -143,7 +179,10 @@ export interface CampoPlantilla {
 export interface FiltrosContrato {
   busqueda?: string
   estado?: EstadoContrato[]
-  tipo?: TipoContrato[]
+  categoria?: CategoriaContrato[]
+  tipo?: TipoEconomico[]
+  periodicidad?: Periodicidad[]
+  proyecto?: string
   fechaInicio?: Date
   fechaFin?: Date
   responsable?: string
@@ -154,23 +193,28 @@ export interface FiltrosContrato {
 export interface EstadisticasContrato {
   total: number
   porEstado: Record<EstadoContrato, number>
-  porTipo: Record<TipoContrato, number>
+  porCategoria: Record<CategoriaContrato, number>
+  porTipoEconomico: Record<TipoEconomico, number>
+  porProyecto: Record<string, number>
   proximosVencer: number
-  valorTotal: number
-  tendenciaMensual: { mes: string; cantidad: number; valor: number }[]
+  montoTotal: number
+  tendenciaMensual: { mes: string; cantidad: number; monto: number }[]
 }
 
 // Tipos para formularios
 export interface FormularioContrato {
   titulo: string
   descripcion: string
-  tipo: TipoContrato
+  contraparte: string
   fechaInicio: Date
-  fechaVencimiento: Date
-  valor?: number
-  moneda?: string
+  fechaTermino: Date
+  monto: number
+  moneda: string
+  categoria: CategoriaContrato
+  periodicidad: Periodicidad
+  tipo: TipoEconomico
+  proyecto: string
   departamento: string
-  contraparteId?: string
   etiquetas: string[]
   documento?: File
 }

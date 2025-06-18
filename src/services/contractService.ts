@@ -41,15 +41,25 @@ export class ContractService {
         collection(db, this.collection),
         where('organizacionId', '==', organizacionId),
         orderBy('fechaCreacion', 'desc')
-      )
-
-      // Aplicar filtros
+      )      // Aplicar filtros
       if (filtros?.estado?.length) {
         q = query(q, where('estado', 'in', filtros.estado))
       }
 
+      if (filtros?.categoria?.length) {
+        q = query(q, where('categoria', 'in', filtros.categoria))
+      }
+
       if (filtros?.tipo?.length) {
         q = query(q, where('tipo', 'in', filtros.tipo))
+      }
+
+      if (filtros?.periodicidad?.length) {
+        q = query(q, where('periodicidad', 'in', filtros.periodicidad))
+      }
+
+      if (filtros?.proyecto) {
+        q = query(q, where('proyecto', '==', filtros.proyecto))
       }
 
       if (filtros?.departamento) {
@@ -64,15 +74,13 @@ export class ContractService {
       q = query(q, limit(pageSize))
       if (lastDoc) {
         q = query(q, startAfter(lastDoc))
-      }
-
-      const snapshot = await getDocs(q)
+      }      const snapshot = await getDocs(q)
       const contratos = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         fechaCreacion: doc.data().fechaCreacion?.toDate(),
         fechaInicio: doc.data().fechaInicio?.toDate(),
-        fechaVencimiento: doc.data().fechaVencimiento?.toDate()
+        fechaTermino: doc.data().fechaTermino?.toDate()
       })) as Contrato[]
 
       const hasMore = snapshot.docs.length === pageSize
@@ -92,22 +100,19 @@ export class ContractService {
 
       if (!docSnap.exists()) {
         return null
-      }
-
-      const data = docSnap.data()
+      }      const data = docSnap.data()
       return {
         id: docSnap.id,
         ...data,
         fechaCreacion: data.fechaCreacion?.toDate(),
         fechaInicio: data.fechaInicio?.toDate(),
-        fechaVencimiento: data.fechaVencimiento?.toDate()
+        fechaTermino: data.fechaTermino?.toDate()
       } as Contrato
     } catch (error) {
       console.error('Error al obtener contrato:', error)
       throw new Error('Error al cargar el contrato')
     }
   }
-
   async crearContrato(
     formulario: FormularioContrato,
     organizacionId: string,
@@ -117,35 +122,36 @@ export class ContractService {
       const batch = writeBatch(db)
       
       // Subir documento si existe
-      let documentoUrl = ''
+      let pdfUrl = ''
       let documentoNombre = ''
       let documentoTamaño = 0
 
       if (formulario.documento) {
         const documentoRef = ref(storage, `contratos/${Date.now()}_${formulario.documento.name}`)
         const uploadResult = await uploadBytes(documentoRef, formulario.documento)
-        documentoUrl = await getDownloadURL(uploadResult.ref)
+        pdfUrl = await getDownloadURL(uploadResult.ref)
         documentoNombre = formulario.documento.name
         documentoTamaño = formulario.documento.size
-      }
-
-      // Crear contrato
+      }      // Crear contrato
       const contratoRef = doc(collection(db, this.collection))
       const contratoData: Omit<Contrato, 'id'> = {
         titulo: formulario.titulo,
         descripcion: formulario.descripcion,
+        contraparte: formulario.contraparte,
+        fechaInicio: formulario.fechaInicio,
+        fechaTermino: formulario.fechaTermino,
+        monto: formulario.monto,
+        moneda: formulario.moneda,
+        pdfUrl,
+        categoria: formulario.categoria,
+        periodicidad: formulario.periodicidad,
         tipo: formulario.tipo,
+        proyecto: formulario.proyecto,
         estado: 'borrador' as any,
         fechaCreacion: new Date(),
-        fechaInicio: formulario.fechaInicio,
-        fechaVencimiento: formulario.fechaVencimiento,
-        valor: formulario.valor,
-        moneda: formulario.moneda,
         organizacionId,
         departamento: formulario.departamento,
         responsableId: usuarioId,
-        contraparteId: formulario.contraparteId,
-        documentoUrl,
         documentoNombre,
         documentoTamaño,
         version: 1,
@@ -158,7 +164,7 @@ export class ContractService {
         ...contratoData,
         fechaCreacion: Timestamp.fromDate(contratoData.fechaCreacion),
         fechaInicio: Timestamp.fromDate(contratoData.fechaInicio),
-        fechaVencimiento: Timestamp.fromDate(contratoData.fechaVencimiento)
+        fechaTermino: Timestamp.fromDate(contratoData.fechaTermino)
       })
 
       // Crear registro de auditoría
@@ -169,7 +175,7 @@ export class ContractService {
         accion: AccionAuditoria.CREACION,
         descripcion: `Contrato "${formulario.titulo}" creado`,
         fecha: new Date(),
-        metadatos: { tipo: formulario.tipo }
+        metadatos: { categoria: formulario.categoria, tipo: formulario.tipo }
       }
 
       batch.set(auditoriaRef, {
@@ -194,14 +200,12 @@ export class ContractService {
       const batch = writeBatch(db)
       
       const contratoRef = doc(db, this.collection, id)
-      const updateData = { ...updates }
-
-      // Convertir fechas a Timestamp
+      const updateData = { ...updates }      // Convertir fechas a Timestamp
       if (updateData.fechaInicio) {
         updateData.fechaInicio = Timestamp.fromDate(updateData.fechaInicio) as any
       }
-      if (updateData.fechaVencimiento) {
-        updateData.fechaVencimiento = Timestamp.fromDate(updateData.fechaVencimiento) as any
+      if (updateData.fechaTermino) {
+        updateData.fechaTermino = Timestamp.fromDate(updateData.fechaTermino) as any
       }
 
       batch.update(contratoRef, updateData)
@@ -232,11 +236,10 @@ export class ContractService {
   async eliminarContrato(id: string, usuarioId: string): Promise<void> {
     try {
       const batch = writeBatch(db)
-      
-      // Obtener contrato para eliminar documento
+        // Obtener contrato para eliminar documento
       const contrato = await this.getContrato(id)
-      if (contrato?.documentoUrl) {
-        const documentoRef = ref(storage, contrato.documentoUrl)
+      if (contrato?.pdfUrl) {
+        const documentoRef = ref(storage, contrato.pdfUrl)
         await deleteObject(documentoRef)
       }
 
@@ -276,8 +279,7 @@ export class ContractService {
       // Por ahora, búsqueda simple por título
       let q = query(
         collection(db, this.collection),
-        where('organizacionId', '==', organizacionId),
-        orderBy('fechaCreacion', 'desc')
+        where('organizacionId', '==', organizacionId),        orderBy('fechaCreacion', 'desc')
       )
 
       const snapshot = await getDocs(q)
@@ -286,7 +288,7 @@ export class ContractService {
         ...doc.data(),
         fechaCreacion: doc.data().fechaCreacion?.toDate(),
         fechaInicio: doc.data().fechaInicio?.toDate(),
-        fechaVencimiento: doc.data().fechaVencimiento?.toDate()
+        fechaTermino: doc.data().fechaTermino?.toDate()
       })) as Contrato[]
 
       // Filtrar por término de búsqueda

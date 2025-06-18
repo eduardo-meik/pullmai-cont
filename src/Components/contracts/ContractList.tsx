@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   DocumentTextIcon,
@@ -13,13 +13,33 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useContracts, useDeleteContract } from '../../hooks/useContracts'
 import { useContractStore } from '../../stores/contractStore'
-import { Contrato, EstadoContrato, TipoContrato } from '../../types'
+import { Contrato, EstadoContrato, CategoriaContrato, TipoEconomico, Periodicidad } from '../../types'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
 import ContractFilters from './ContractFilters'
 import ContractCard from './ContractCard'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import EmptyState from '../ui/EmptyState'
+import { useAuth } from '../../contexts/AuthContext'
+import { canAccessContract, getRoleById } from '../../types/roles'
+
+interface Contract {
+  id: string
+  titulo: string
+  organizacionId: string
+  responsableId: string
+  estado: string
+  fechaCreacion: any
+  fechaInicio: any
+  fechaTermino: any
+  contraparte: string
+  monto: number
+  categoria: CategoriaContrato
+  tipo: TipoEconomico
+  periodicidad: Periodicidad
+  proyecto: string
+  departamento: string
+}
 
 const ContractList: React.FC = () => {
   const [busqueda, setBusqueda] = useState('')
@@ -27,10 +47,106 @@ const ContractList: React.FC = () => {
   const { filtros } = useContractStore()
   const { data, isLoading, error } = useContracts(filtros)
   const deleteContract = useDeleteContract()
+  const { currentUser } = useAuth()
+  const [contracts, setContracts] = useState<Contract[]>([])
+  const [loading, setLoading] = useState(true)
+  const [errorUser, setError] = useState('')
+  const [userRole, setUserRole] = useState('')
+  const [userOrgId, setUserOrgId] = useState('')
 
-  const handleEliminar = async (id: string) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este contrato?')) {
-      await deleteContract.mutateAsync(id)
+  useEffect(() => {
+    if (currentUser) {
+      loadUserData()
+    }
+  }, [currentUser])
+
+  useEffect(() => {
+    if (userRole && userOrgId) {
+      loadContracts()
+    }
+  }, [userRole, userOrgId])
+
+  const loadUserData = async () => {
+    if (!currentUser) return
+
+    try {
+      const { doc, getDoc, getFirestore } = await import('firebase/firestore')
+      const db = getFirestore()
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data()
+        setUserRole(userData.role || 'User')
+        setUserOrgId(userData.organization || '')
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error)
+      setError('Error al cargar los datos del usuario')
+    }
+  }
+
+  const loadContracts = async () => {
+    if (!currentUser || !userRole || !userOrgId) return
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const { collection, query, where, getDocs, getFirestore, orderBy } = await import('firebase/firestore')
+      const db = getFirestore()
+      
+      let contractsQuery;
+      const role = getRoleById(userRole);
+      
+      if (role?.id === 'super_admin') {
+        // Super Admin can see all contracts
+        contractsQuery = query(
+          collection(db, 'contracts'),
+          orderBy('createdAt', 'desc')
+        )
+      } else if (role?.id === 'organization_admin') {
+        // Organization Admin can see all contracts in their organization
+        contractsQuery = query(
+          collection(db, 'contracts'),
+          where('organizationId', '==', userOrgId),
+          orderBy('createdAt', 'desc')
+        )
+      } else if (role?.id === 'manager') {
+        // Manager can see contracts in their organization that they manage or are assigned to
+        contractsQuery = query(
+          collection(db, 'contracts'),
+          where('organizationId', '==', userOrgId),
+          orderBy('createdAt', 'desc')
+        )
+      } else {
+        // Regular user can only see contracts assigned to them or created by them
+        contractsQuery = query(
+          collection(db, 'contracts'),
+          where('organizationId', '==', userOrgId),
+          orderBy('createdAt', 'desc')
+        )
+      }
+
+      const querySnapshot = await getDocs(contractsQuery)
+      const contractsData: Contract[] = []
+
+      querySnapshot.forEach((doc) => {
+        const contract = { id: doc.id, ...doc.data() } as Contract
+        
+        // Additional filtering based on role permissions
+        if (canAccessContract(userRole, userOrgId, contract.organizacionId, currentUser?.departamento, contract.departamento)) {
+          contractsData.push(contract)
+        }
+      })
+
+      console.log(`Loaded ${contractsData.length} contracts for user role: ${userRole}`)
+      setContracts(contractsData)
+
+    } catch (error) {
+      console.error('Error loading contracts:', error)
+      setError('Error al cargar los contratos')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -52,15 +168,74 @@ const ContractList: React.FC = () => {
     return colores[estado] || 'bg-gray-100 text-gray-800'
   }
 
-  const getTipoIcon = (tipo: TipoContrato) => {
+  const getTipoIcon = (tipo: TipoEconomico) => {
     return <DocumentTextIcon className="h-5 w-5" />
   }
 
-  if (isLoading) {
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return 'N/A'
+    
+    let date;
+    if (timestamp.toDate) {
+      date = timestamp.toDate()
+    } else if (timestamp instanceof Date) {
+      date = timestamp
+    } else {
+      date = new Date(timestamp)
+    }
+    
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active':
+      case 'activo':
+        return 'bg-green-100 text-green-800'
+      case 'pending':
+      case 'pendiente':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'completed':
+      case 'completado':
+        return 'bg-blue-100 text-blue-800'
+      case 'cancelled':
+      case 'cancelado':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active':
+        return 'Activo'
+      case 'pending':
+        return 'Pendiente'
+      case 'completed':
+        return 'Completado'
+      case 'cancelled':
+        return 'Cancelado'
+      default:
+        return status || 'Desconocido'
+    }
+  }
+
+  const handleEliminar = async (id: string) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este contrato?')) {
+      await deleteContract.mutateAsync(id)
+    }
+  }
+
+  if (isLoading || loading) {
     return <LoadingSpinner />
   }
 
-  if (error) {
+  if (error || errorUser) {
     return (
       <div className="text-center py-12">
         <p className="text-red-600">Error al cargar los contratos</p>
