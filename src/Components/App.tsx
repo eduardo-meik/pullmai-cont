@@ -9,8 +9,10 @@ import PrivateRoutes from './PrivateRoutes'
 import ForgotPassword from './ForgotPassword'
 import UpdateProfile from './UpdateProfile'
 import Projects from './Projects'
-import ContractList from './contracts/ContractList' // Corrected import path
-import DashboardLayout from './layout/DashboardLayout' // Corrected import path
+import ContractList from './contracts/ContractList'
+import DashboardLayout from './layout/DashboardLayout'
+import ProjectList from './projects/ProjectList'
+import ProjectDetail from './projects/ProjectDetail'
 import { ToastProvider } from '../contexts/ToastContext'
 import { ApiProvider } from '../contexts/ApiContext'
 import 'react-toastify/dist/ReactToastify.min.css'
@@ -43,14 +45,14 @@ function App() {
   
   return (
     <Router>
-      <AppContextProviders components={providers}>
-        <Routes>
+      <AppContextProviders components={providers}>        <Routes>
           <Route element={<PrivateRoutes />}>
             <Route element={<DashboardLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/contratos" element={<ContractList />} />
               <Route path="/update-profile" element={<UpdateProfile />} />
-              <Route path="/projects" element={<Projects />} />
+              <Route path="/projects" element={<ProjectList />} />
+              <Route path="/projects/:id" element={<ProjectDetail />} />
             </Route>
           </Route>
           <Route path="/signup" element={<Signup />} />

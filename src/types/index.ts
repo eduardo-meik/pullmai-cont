@@ -11,6 +11,23 @@ export interface Usuario {
   fechaCreacion: Date
   ultimoAcceso?: Date
   permisos: string[]
+  // Nuevos campos para el sistema de asignaciones
+  asignaciones?: UserAssignment[]
+}
+
+// Interfaz para asignaciones específicas de usuarios (importada desde roles.ts)
+export interface UserAssignment {
+  userId: string
+  organizationId?: string
+  projectIds?: string[]
+  contractIds?: string[]
+  permissions: AssignmentPermission[]
+}
+
+export interface AssignmentPermission {
+  resource: 'projects' | 'contracts'
+  resourceId: string
+  actions: ('view' | 'edit')[]
 }
 
 export enum UserRole {
@@ -63,7 +80,8 @@ export interface Contrato {
   categoria: CategoriaContrato // Categoría del contrato
   periodicidad: Periodicidad // Frecuencia del contrato
   tipo: TipoEconomico // Tipo económico (Compra/Venta, Ingreso/Egreso)
-  proyecto: string // Proyecto al que pertenece el contrato
+  proyecto: string // Proyecto al que pertenece el contrato (nombre del proyecto)
+  proyectoId: string // ID del proyecto (nuevo campo para la relación jerárquica)
   
   // Campos existentes mantenidos
   estado: EstadoContrato
@@ -206,14 +224,16 @@ export interface FormularioContrato {
   titulo: string
   descripcion: string
   contraparte: string
-  fechaInicio: Date
-  fechaTermino: Date
+  fechaInicio: string
+  fechaTermino: string
   monto: number
   moneda: string
   categoria: CategoriaContrato
   periodicidad: Periodicidad
   tipo: TipoEconomico
   proyecto: string
+  proyectoId: string // Nuevo campo para la relación jerárquica
+  estado: EstadoContrato
   departamento: string
   etiquetas: string[]
   documento?: File
@@ -230,4 +250,78 @@ export interface ContextoPermiso {
   usuario: Usuario
   organizacion: Organizacion
   recurso?: any
+}
+
+// Enumeraciones para proyectos
+export enum EstadoProyecto {
+  PLANIFICACION = 'planificacion',
+  EN_CURSO = 'en_curso',
+  PAUSADO = 'pausado',
+  COMPLETADO = 'completado',
+  CANCELADO = 'cancelado'
+}
+
+export enum PrioridadProyecto {
+  BAJA = 'baja',
+  MEDIA = 'media',
+  ALTA = 'alta',
+  CRITICA = 'critica'
+}
+
+// Interfaz para proyectos
+export interface Proyecto {
+  id: string
+  nombre: string
+  descripcion: string
+  estado: EstadoProyecto
+  prioridad: PrioridadProyecto
+  fechaInicio: Date
+  fechaFinEstimada?: Date
+  fechaFinReal?: Date
+  presupuestoTotal: number
+  presupuestoGastado: number
+  moneda: string
+  
+  // Responsables y organización
+  responsableId: string
+  organizacionId: string
+  departamento: string
+  equipoIds: string[] // IDs de los miembros del equipo
+  
+  // Métricas del proyecto
+  numeroContratos: number
+  valorTotalContratos: number
+  contratosActivos: number
+  contratosPendientes: number
+  
+  // Metadatos
+  etiquetas: string[]
+  color?: string // Color para visualización en UI
+  icono?: string // Icono para el proyecto
+  
+  // Auditoría
+  fechaCreacion: Date
+  creadoPor: string
+  fechaUltimaModificacion: Date
+  modificadoPor: string
+  version: number
+}
+
+// Estadísticas agregadas por proyecto
+export interface EstadisticasProyecto {
+  totalContratos: number
+  contratosActivos: number
+  contratosPorVencer: number
+  contratosVencidos: number
+  valorTotal: number
+  valorActivo: number
+  ingresos: number
+  egresos: number
+  distribucionPorCategoria: Record<CategoriaContrato, number>
+  distribucionPorEstado: Record<EstadoContrato, number>
+  tendenciaMensual: Array<{
+    mes: string
+    valor: number
+    cantidad: number
+  }>
 }

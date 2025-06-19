@@ -4,8 +4,12 @@ import {
   DocumentTextIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  FolderIcon,
+  PlayIcon
 } from '@heroicons/react/24/outline'
+import { useContracts } from '../../hooks/useContracts'
+import { useProjectStats } from '../../hooks/useProjects'
 
 interface StatCardProps {
   title: string
@@ -60,44 +64,102 @@ const StatCard: React.FC<StatCardProps> = ({
 }
 
 const DashboardStats: React.FC = () => {
-  // Estos datos vendrían de una API o store
+  const contractsQuery = useContracts()
+  const { resumen: projectStats, loading: projectsLoading } = useProjectStats()
+
+  const contratos = contractsQuery.data?.contratos || []
+  const contractsLoading = contractsQuery.isLoading
+
+  // Calcular estadísticas de contratos
+  const contratosActivos = contratos.filter((c: any) => c.estado === 'ACTIVO').length
+  const contratosPorVencer = contratos.filter((c: any) => {
+    const hoy = new Date()
+    const diasParaVencer = Math.ceil((c.fechaTermino.getTime() - hoy.getTime()) / (1000 * 3600 * 24))
+    return diasParaVencer <= 30 && diasParaVencer > 0
+  }).length
+  
+  const valorTotal = contratos.reduce((sum: number, c: any) => sum + c.monto, 0)
+
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  if (contractsLoading || projectsLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+        {[...Array(6)].map((_, index) => (
+          <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </div>
+              <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   const stats = [
     {
       title: 'Total Contratos',
-      value: 156,
-      change: '+12% vs mes anterior',
-      changeType: 'increase' as const,
+      value: contratos.length,
+      change: `${contratosActivos} activos`,
+      changeType: 'neutral' as const,
       icon: <DocumentTextIcon className="h-6 w-6 text-blue-600" />,
       color: 'bg-blue-100'
     },
     {
       title: 'Contratos Activos',
-      value: 89,
-      change: '+5% vs mes anterior',
+      value: contratosActivos,
+      change: `${Math.round((contratosActivos / contratos.length) * 100)}% del total`,
       changeType: 'increase' as const,
       icon: <CheckCircleIcon className="h-6 w-6 text-green-600" />,
       color: 'bg-green-100'
     },
     {
       title: 'Próximos a Vencer',
-      value: 12,
-      change: '3 en los próximos 7 días',
-      changeType: 'neutral' as const,
+      value: contratosPorVencer,
+      change: 'En los próximos 30 días',
+      changeType: contratosPorVencer > 5 ? 'decrease' as const : 'neutral' as const,
       icon: <ExclamationTriangleIcon className="h-6 w-6 text-orange-600" />,
       color: 'bg-orange-100'
     },
     {
       title: 'Valor Total',
-      value: '€2.4M',
-      change: '+18% vs mes anterior',
+      value: formatCurrency(valorTotal),
+      change: `${contratos.length} contratos`,
       changeType: 'increase' as const,
       icon: <CurrencyDollarIcon className="h-6 w-6 text-purple-600" />,
       color: 'bg-purple-100'
+    },
+    {
+      title: 'Total Proyectos',
+      value: projectStats.totalProyectos,
+      change: `${projectStats.proyectosActivos} activos`,
+      changeType: 'neutral' as const,
+      icon: <FolderIcon className="h-6 w-6 text-indigo-600" />,
+      color: 'bg-indigo-100'
+    },
+    {
+      title: 'Proyectos Activos',
+      value: projectStats.proyectosActivos,
+      change: `${projectStats.proyectosCompletados} completados`,
+      changeType: 'increase' as const,
+      icon: <PlayIcon className="h-6 w-6 text-emerald-600" />,
+      color: 'bg-emerald-100'
     }
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
       {stats.map((stat, index) => (
         <motion.div
           key={stat.title}
