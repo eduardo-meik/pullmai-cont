@@ -1,13 +1,48 @@
-import React from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { useProject } from '../../hooks/useProjects'
+import React, { useState } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useProject, useProjects } from '../../hooks/useProjects'
+import { useDeleteContract } from '../../hooks/useContracts'
 import { EstadoProyecto, PrioridadProyecto, EstadoContrato } from '../../types'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import ContractCard from '../contracts/ContractCard'
+import { useToast } from '../../contexts/ToastContext'
 
 const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { proyecto, contratos, estadisticas, loading, error } = useProject(id!)
+  const { eliminarProyecto } = useProjects()
+  const deleteContractMutation = useDeleteContract()
+  const { showToast } = useToast()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDeleteProject = async () => {
+    if (!proyecto) return
+    
+    setIsDeleting(true)
+    try {
+      await eliminarProyecto(proyecto.id)
+      showToast('Proyecto eliminado exitosamente', 'success')
+      navigate('/projects')
+    } catch (error) {
+      console.error('Error eliminando proyecto:', error)
+      showToast('Error al eliminar el proyecto', 'error')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
+  const handleDeleteContract = async (contractId: string) => {
+    try {
+      await deleteContractMutation.mutateAsync(contractId)
+      // Toast will be shown by the hook automatically
+    } catch (error) {
+      console.error('Error eliminando contrato:', error)
+      // Error toast will be shown by the hook automatically
+    }
+  }
 
   if (loading) {
     return (      <div className="flex justify-center items-center min-h-64">
@@ -117,10 +152,15 @@ const ProjectDetail: React.FC = () => {
                 </span>
               </div>
             </div>
-          </div>
-          <div className="flex space-x-3">
+          </div>          <div className="flex space-x-3">
             <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors">
               Editar
+            </button>
+            <button 
+              onClick={() => setShowDeleteConfirm(true)}
+              className="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Eliminar
             </button>
             <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
               Nuevo Contrato
@@ -317,7 +357,7 @@ const ProjectDetail: React.FC = () => {
               <ContractCard 
                 key={contrato.id} 
                 contrato={contrato} 
-                onEliminar={() => {/* TODO: Implementar eliminación */}}
+                onEliminar={() => handleDeleteContract(contrato.id)}
               />
             ))}
           </div>
@@ -333,9 +373,58 @@ const ProjectDetail: React.FC = () => {
             <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
               Crear Primer Contrato
             </button>
-          </div>
-        )}
+          </div>        )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.314 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Confirmar eliminación
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Esta acción no se puede deshacer
+                </p>
+              </div>
+            </div>
+            <p className="text-gray-700 mb-6">
+              ¿Estás seguro de que deseas eliminar el proyecto <strong>"{proyecto?.nombre}"</strong>? 
+              Se eliminarán todos los datos asociados, incluyendo contratos y documentos.
+            </p>
+            <div className="flex space-x-3 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? (
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Eliminando...
+                  </div>
+                ) : (
+                  'Eliminar Proyecto'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

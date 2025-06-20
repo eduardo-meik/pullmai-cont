@@ -14,6 +14,8 @@ import {
   onAuthStateChanged,
   User
 } from 'firebase/auth'
+import { useAuthStore } from '../stores/authStore'
+import UserService from '../services/userService'
 
 interface IAuthProviderProps {
   children: JSX.Element
@@ -46,6 +48,7 @@ export function useAuth(): AuthContextType {
 export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const { setUsuario, logout: logoutFromStore } = useAuthStore()
 
   function signup(email: string, password: string): Promise<any> {
     return createUserWithEmailAndPassword(auth, email, password)
@@ -66,6 +69,7 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
   }
 
   function logout(): Promise<void> {
+    logoutFromStore()
     return signOut(auth)
   }
 
@@ -90,15 +94,40 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
   function getCurrentUserToken(): Promise<string | null> {
     return currentUser ? currentUser.getIdToken() : Promise.resolve(null)
   }
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        let userProfile = await UserService.getUserProfile(user.uid)
+        
+        // If no user profile exists, create a default one
+        if (!userProfile) {
+          userProfile = {
+            id: user.uid,
+            email: user.email || '',
+            nombre: user.displayName?.split(' ')[0] || 'Usuario',
+            apellido: user.displayName?.split(' ').slice(1).join(' ') || '',
+            rol: 'user' as any,
+            organizacionId: 'MEIK LABS',
+            departamento: 'General',
+            activo: true,
+            fechaCreacion: new Date(),
+            ultimoAcceso: new Date(),
+            permisos: [],
+            asignaciones: []
+          }
+        }
+        
+        setUsuario(userProfile)
+      } else {
+        logoutFromStore()
+      }
       setCurrentUser(user)
       setLoading(false)
     })
 
     return unsubscribe
-  }, [])
+  }, [setUsuario, logoutFromStore])
+
   const value: AuthContextType = {
     currentUser,
     login,

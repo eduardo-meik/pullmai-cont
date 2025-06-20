@@ -73,6 +73,24 @@ const ModernSignup: React.FC = () => {
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
+  const getFirebaseErrorMessage = (errorCode: string): string => {
+    const errorMap: { [key: string]: string } = {
+      'auth/email-already-in-use': 'Ya existe una cuenta con este correo electrónico. Intenta iniciar sesión',
+      'auth/invalid-email': 'Correo electrónico inválido',
+      'auth/weak-password': 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres',
+      'auth/operation-not-allowed': 'Registro no permitido. Contacta al administrador',
+      'auth/network-request-failed': 'Error de conexión. Verifica tu internet e intenta nuevamente',
+      'auth/timeout': 'La solicitud ha tardado demasiado. Intenta nuevamente',
+      'auth/quota-exceeded': 'Se ha excedido el límite de solicitudes. Intenta más tarde',
+      'auth/popup-closed-by-user': 'Registro cancelado',
+      'auth/popup-blocked': 'Popup bloqueado. Permite popups para este sitio y recarga la página',
+      'auth/cancelled-popup-request': 'Solicitud de popup cancelada',
+      'auth/account-exists-with-different-credential': 'Ya existe una cuenta con este correo usando un método diferente. Intenta iniciar sesión',
+      'auth/credential-already-in-use': 'Esta credencial ya está en uso por otra cuenta'
+    }
+    
+    return errorMap[errorCode] || 'Error inesperado al crear la cuenta. Intenta nuevamente'
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,22 +101,27 @@ const ModernSignup: React.FC = () => {
       setLoading(true)
       setErrors({})
       
-      await signup(emailRef.current?.value, passwordRef.current?.value)
-      navigate('/')
-    } catch (error: any) {
-      let errorMessage = 'Error al crear la cuenta'
+      const email = emailRef.current?.value
+      const password = passwordRef.current?.value
       
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'Ya existe una cuenta con este correo electrónico'
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Correo electrónico inválido'
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'La contraseña es demasiado débil'
-      } else if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = 'Registro no permitido. Contacta al administrador'
+      if (!email || !password) {
+        setErrors({ general: 'Email y contraseña son requeridos' })
+        return
       }
       
+      await signup(email, password)
+      navigate('/')
+    } catch (error: any) {
+      console.error('Signup error:', error)
+      const errorMessage = getFirebaseErrorMessage(error.code)
       setErrors({ general: errorMessage })
+      
+      // Focus on email field if email already exists
+      if (error.code === 'auth/email-already-in-use') {
+        emailRef.current?.focus()
+      } else if (error.code === 'auth/weak-password') {
+        passwordRef.current?.focus()
+      }
     } finally {
       setLoading(false)
     }
@@ -117,14 +140,12 @@ const ModernSignup: React.FC = () => {
       
       navigate('/')
     } catch (error: any) {
-      let errorMessage = `Error al registrarse con ${provider === 'google' ? 'Google' : 'GitHub'}`
+      console.error(`${provider} signup error:`, error)
+      let errorMessage = getFirebaseErrorMessage(error.code)
       
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Registro cancelado'
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Popup bloqueado. Permite popups para este sitio'
-      } else if (error.code === 'auth/account-exists-with-different-credential') {
-        errorMessage = 'Ya existe una cuenta con este correo usando otro método'
+      // If no specific message found, use generic social signup error
+      if (errorMessage === 'Error inesperado al crear la cuenta. Intenta nuevamente') {
+        errorMessage = `Error al registrarse con ${provider === 'google' ? 'Google' : 'GitHub'}. Intenta nuevamente`
       }
       
       setErrors({ general: errorMessage })

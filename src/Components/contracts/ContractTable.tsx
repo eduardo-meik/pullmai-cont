@@ -9,13 +9,18 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  LinkIcon
 } from '@heroicons/react/24/outline'
 import { useContracts, useDeleteContract } from '../../hooks/useContracts'
-import { Contrato, FormularioContrato } from '../../types'
+import { Contrato, FormularioContrato, Proyecto } from '../../types'
 import ContractForm from './ContractForm'
+import ContractPDFViewer from './ContractPDFViewer'
+import ContractProjectAssociation from './ContractProjectAssociation'
 import { motion, AnimatePresence } from 'framer-motion'
 import usePermissions from '../../hooks/usePermissions'
+import Button from '../ui/Button'
+import { useToast } from '../../contexts/ToastContext'
 
 interface SortConfig {
   key: keyof Contrato
@@ -24,14 +29,18 @@ interface SortConfig {
 
 const ContractTable: React.FC = () => {
   const { data, isLoading } = useContracts()
-  const deleteContractMutation = useDeleteContract()
+  const deleteContractMutation = useDeleteContract() // Reactivated delete functionality
   const [editingContract, setEditingContract] = useState<Contrato | null>(null)
-  const [viewingPDF, setViewingPDF] = useState<string | null>(null)
+  const [viewingPDF, setViewingPDF] = useState<{ url: string; title: string } | null>(null)
+  const [showProjectAssociation, setShowProjectAssociation] = useState(false)
+  const [selectedContracts, setSelectedContracts] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'fechaInicio', direction: 'desc' })
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [jumpToPage, setJumpToPage] = useState('')
+  const { showToast } = useToast()
 
   // Permission hooks
   const { 
@@ -78,10 +87,8 @@ const ContractTable: React.FC = () => {
       const matchesStatus = statusFilter === 'all' || contract.estado === statusFilter
       
       return matchesSearch && matchesStatus
-    })
-
-    // Sort contracts
-    filtered.sort((a, b) => {
+    })    // Sort contracts
+    filtered.sort((a: Contrato, b: Contrato) => {
       const aValue = a[sortConfig.key]
       const bValue = b[sortConfig.key]
       
@@ -108,13 +115,13 @@ const ContractTable: React.FC = () => {
 
     return filtered
   }, [contracts, searchTerm, statusFilter, sortConfig])
-
   // Pagination
   const totalPages = Math.ceil(filteredContracts.length / itemsPerPage)
   const paginatedContracts = filteredContracts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
+  
   const handleSort = (key: keyof Contrato) => {
     setSortConfig(prev => ({
       key,
@@ -122,10 +129,49 @@ const ContractTable: React.FC = () => {
     }))
   }
 
+  const handlePageSizeChange = (newSize: number) => {
+    setItemsPerPage(newSize)
+    setCurrentPage(1) // Reset to first page when changing page size
+  }
+
+  const handleJumpToPage = () => {
+    const pageNum = parseInt(jumpToPage)
+    if (pageNum && pageNum >= 1 && pageNum <= totalPages) {
+      setCurrentPage(pageNum)
+      setJumpToPage('')
+    }
+  }
+
+  const getPageNumbers = () => {
+    const delta = 2 // Number of pages to show around current page
+    const range = []
+    const rangeWithDots = []
+
+    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+      range.push(i)
+    }
+
+    if (currentPage - delta > 2) {
+      rangeWithDots.push(1, '...')
+    } else {
+      rangeWithDots.push(1)
+    }
+
+    rangeWithDots.push(...range)
+
+    if (currentPage + delta < totalPages - 1) {
+      rangeWithDots.push('...', totalPages)
+    } else if (totalPages > 1) {
+      rangeWithDots.push(totalPages)
+    }
+
+    return rangeWithDots
+  }
   const handleDelete = async (id: string) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este contrato?')) {
       try {
-        await deleteContractMutation.mutateAsync(id)
+        await deleteContractMutation.mutateAsync(id) // Reactivated delete functionality
+        console.log('Contract deleted successfully')
       } catch (error) {
         console.error('Error al eliminar contrato:', error)
         alert('Error al eliminar el contrato')
@@ -159,6 +205,44 @@ const ContractTable: React.FC = () => {
   }
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('es-MX')
+  }
+
+  // Contract selection functions
+  const handleContractSelect = (contractId: string) => {
+    setSelectedContracts(prev => 
+      prev.includes(contractId)
+        ? prev.filter(id => id !== contractId)
+        : [...prev, contractId]
+    )
+  }
+
+  const handleSelectAllContracts = () => {
+    if (selectedContracts.length === paginatedContracts.length) {
+      setSelectedContracts([])
+    } else {
+      setSelectedContracts(paginatedContracts.map((c: Contrato) => c.id))
+    }
+  }
+
+  // Project association function
+  const handleAssociateContracts = async (contractIds: string[], project: Proyecto) => {
+    try {
+      // Here you would typically call a service to associate contracts with the project
+      // For now, we'll just show a success message
+      console.log('Associating contracts:', contractIds, 'to project:', project.id)
+      
+      // In a real implementation, you might:
+      // await contractService.associateContractsToProject(contractIds, project.id)
+      
+      // Clear selections
+      setSelectedContracts([])
+      setShowProjectAssociation(false)
+      
+      showToast(`${contractIds.length} contrato(s) asociado(s) al proyecto "${project.nombre}"`, 'success')
+    } catch (error) {
+      console.error('Error associating contracts:', error)
+      throw error
+    }
   }
 
   if (isLoading) {
@@ -200,16 +284,52 @@ const ContractTable: React.FC = () => {
                 <option value="cancelado">Cancelado</option>
               </select>
             </div>
+          </div>        </div>
+      </div>
+
+      {/* Actions Toolbar */}
+      {selectedContracts.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-blue-900">
+                {selectedContracts.length} contrato(s) seleccionado(s)
+              </span>
+              <button
+                onClick={() => setSelectedContracts([])}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Limpiar selección
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setShowProjectAssociation(true)}
+                variant="primary"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <LinkIcon className="h-4 w-4" />
+                Asociar a Proyecto
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200">            <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedContracts.length === paginatedContracts.length && paginatedContracts.length > 0}
+                    onChange={handleSelectAllContracts}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                </th>
                 <th 
                   onClick={() => handleSort('titulo')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -293,14 +413,22 @@ const ContractTable: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               <AnimatePresence>
-                {paginatedContracts.map((contract) => (
-                  <motion.tr
+                {paginatedContracts.map((contract: Contrato) => (                  <motion.tr
                     key={contract.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="hover:bg-gray-50"
                   >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedContracts.includes(contract.id)}
+                        onChange={() => handleContractSelect(contract.id)}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {contract.titulo}
@@ -323,16 +451,15 @@ const ContractTable: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(contract.estado)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">                      <div className="flex items-center justify-end space-x-2">
-                        {contract.pdfUrl && (
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">                      <div className="flex items-center justify-end space-x-2">                        {contract.pdfUrl && (
                           <button
-                            onClick={() => setViewingPDF(contract.pdfUrl)}
+                            onClick={() => setViewingPDF({ url: contract.pdfUrl, title: contract.titulo })}
                             className="text-blue-600 hover:text-blue-900 p-1 rounded"
                             title="Ver PDF"
                           >
                             <DocumentIcon className="h-5 w-5" />
                           </button>
-                        )}                        {canEditContract(contract.organizacionId, contract.proyectoId, contract.id) && (
+                        )}{canEditContract(contract.organizacionId, contract.proyectoId, contract.id) && (
                           <button
                             onClick={() => setEditingContract(contract)}
                             className="text-indigo-600 hover:text-indigo-900 p-1 rounded"
@@ -359,9 +486,30 @@ const ContractTable: React.FC = () => {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination */}        {/* Enhanced Pagination */}
         {totalPages > 1 && (
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+          <div className="bg-white px-4 py-4 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 sm:px-6 space-y-3 sm:space-y-0">
+            {/* Page Size Selector */}
+            <div className="flex items-center space-x-2">
+              <label htmlFor="pageSize" className="text-sm text-gray-700">
+                Mostrar:
+              </label>
+              <select
+                id="pageSize"
+                value={itemsPerPage}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-700">por página</span>
+            </div>
+
+            {/* Mobile pagination */}
             <div className="flex-1 flex justify-between sm:hidden">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -370,59 +518,123 @@ const ContractTable: React.FC = () => {
               >
                 Anterior
               </button>
+              <span className="text-sm text-gray-700 flex items-center">
+                Página {currentPage} de {totalPages}
+              </span>
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Siguiente
               </button>
             </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Mostrando{' '}
-                  <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
-                  {' '}a{' '}
-                  <span className="font-medium">
-                    {Math.min(currentPage * itemsPerPage, filteredContracts.length)}
-                  </span>
-                  {' '}de{' '}
-                  <span className="font-medium">{filteredContracts.length}</span>
-                  {' '}resultados
-                </p>
+
+            {/* Desktop pagination info */}
+            <div className="hidden sm:flex sm:items-center">
+              <p className="text-sm text-gray-700">
+                Mostrando{' '}
+                <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
+                {' '}-{' '}
+                <span className="font-medium">
+                  {Math.min(currentPage * itemsPerPage, filteredContracts.length)}
+                </span>
+                {' '}de{' '}
+                <span className="font-medium">{filteredContracts.length}</span>
+                {' '}contratos
+              </p>
+            </div>
+
+            {/* Desktop pagination controls */}
+            <div className="hidden sm:flex sm:items-center sm:space-x-4">
+              {/* Jump to page */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">Ir a:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={jumpToPage}
+                  onChange={(e) => setJumpToPage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleJumpToPage()}
+                  className="w-16 border border-gray-300 rounded-md px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={currentPage.toString()}
+                />
+                <button
+                  onClick={handleJumpToPage}
+                  disabled={!jumpToPage || parseInt(jumpToPage) < 1 || parseInt(jumpToPage) > totalPages}
+                  className="px-2 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Ir
+                </button>
               </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeftIcon className="h-5 w-5" />
-                  </button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+
+              {/* Page navigation */}
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                {/* First page button */}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Primera página"
+                >
+                  <span className="sr-only">Primera página</span>
+                  ⏮
+                </button>
+
+                {/* Previous page button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeftIcon className="h-5 w-5" />
+                </button>
+
+                {/* Page numbers with smart truncation */}
+                {getPageNumbers().map((page, index) => (
+                  page === '...' ? (
+                    <span
+                      key={`dots-${index}`}
+                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+                    >
+                      ...
+                    </span>
+                  ) : (
                     <button
                       key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                      onClick={() => setCurrentPage(page as number)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors ${
                         page === currentPage
-                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600 hover:bg-blue-100'
                           : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
                       }`}
                     >
                       {page}
                     </button>
-                  ))}
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRightIcon className="h-5 w-5" />
-                  </button>
-                </nav>
-              </div>
+                  )
+                ))}
+
+                {/* Next page button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRightIcon className="h-5 w-5" />
+                </button>
+
+                {/* Last page button */}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Última página"
+                >
+                  <span className="sr-only">Última página</span>
+                  ⏭
+                </button>
+              </nav>
             </div>
           </div>
         )}
@@ -451,30 +663,24 @@ const ContractTable: React.FC = () => {
             // Refresh logic would go here
           }}
         />
+      )}      {/* PDF Viewer Modal */}
+      {viewingPDF && (
+        <ContractPDFViewer
+          isOpen={!!viewingPDF}
+          onClose={() => setViewingPDF(null)}
+          pdfUrl={viewingPDF.url}
+          contractTitle={viewingPDF.title}        />
       )}
 
-      {/* PDF Viewer Modal */}
-      {viewingPDF && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full overflow-hidden">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-medium">Vista previa del contrato</h3>
-              <button
-                onClick={() => setViewingPDF(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="h-96 overflow-auto">
-              <iframe
-                src={viewingPDF}
-                className="w-full h-full"
-                title="Contract PDF"
-              />
-            </div>
-          </div>
-        </div>
+      {/* Project Association Modal */}
+      {showProjectAssociation && (
+        <ContractProjectAssociation
+          isOpen={showProjectAssociation}
+          onClose={() => setShowProjectAssociation(false)}
+          contracts={contracts.filter((c: Contrato) => selectedContracts.includes(c.id))}
+          onAssociateContracts={handleAssociateContracts}
+          title="Asociar Contratos a Proyecto"
+        />
       )}
     </div>
   )

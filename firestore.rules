@@ -1,12 +1,14 @@
 // Reglas de seguridad de Firestore para desarrollo
-// ADVERTENCIA: Estas reglas son permisivas y solo deben usarse en desarrollo
-// Para producción, implementa reglas de seguridad apropiadas
+// ⚠️ ADVERTENCIA: Estas reglas son permisivas y solo deben usarse en desarrollo
+// ⚠️ ANTES DE PRODUCCIÓN: Reemplazar con firestore.rules.production
+// ⚠️ Para producción, usar: firebase deploy --only firestore:rules --project=production
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ⚠️ REGLAS PERMISIVAS SOLO PARA DESARROLLO
     // Permitir lectura y escritura a todos los documentos durante desarrollo
-    // CAMBIAR ANTES DE PRODUCCIÓN
+    // 🚨 CAMBIAR ANTES DE PRODUCCIÓN 🚨
     match /{document=**} {
       allow read, write: if true;
     }

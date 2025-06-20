@@ -13,7 +13,7 @@ import {
   Timestamp 
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import { Proyecto, EstadisticasProyecto, Contrato } from '../types'
+import { Proyecto, EstadisticasProyecto, Contrato, EstadoContrato, TipoEconomico, CategoriaContrato, EstadoProyecto } from '../types'
 
 // Servicio para gestión de proyectos
 export class ProjectService {
@@ -121,7 +121,7 @@ export class ProjectService {
       const contratos = await this.obtenerContratosPorProyecto(nombreProyecto)
       
       const totalContratos = contratos.length
-      const contratosActivos = contratos.filter(c => c.estado === 'ACTIVO').length
+      const contratosActivos = contratos.filter(c => c.estado === EstadoContrato.ACTIVO).length
       
       // Contratos por vencer (próximos 30 días)
       const hoy = new Date()
@@ -134,19 +134,19 @@ export class ProjectService {
       
       // Contratos vencidos
       const contratosVencidos = contratos.filter(c => {
-        return c.fechaTermino < hoy && c.estado !== 'RENOVADO'
+        return c.fechaTermino < hoy && c.estado !== EstadoContrato.RENOVADO
       }).length
       
       // Valores financieros
       const valorTotal = contratos.reduce((sum, c) => sum + c.monto, 0)
       const valorActivo = contratos
-        .filter(c => c.estado === 'ACTIVO')
+        .filter(c => c.estado === EstadoContrato.ACTIVO)
         .reduce((sum, c) => sum + c.monto, 0)
       const ingresos = contratos
-        .filter(c => c.tipo === 'INGRESO')
+        .filter(c => c.tipo === TipoEconomico.INGRESO)
         .reduce((sum, c) => sum + c.monto, 0)
       const egresos = contratos
-        .filter(c => c.tipo === 'EGRESO')
+        .filter(c => c.tipo === TipoEconomico.EGRESO)
         .reduce((sum, c) => sum + c.monto, 0)
       
       // Distribución por categoría
@@ -218,9 +218,27 @@ export class ProjectService {
       valorTotal: 0,
       valorActivo: 0,
       ingresos: 0,
-      egresos: 0,
-      distribucionPorCategoria: {},
-      distribucionPorEstado: {},
+      egresos: 0,      distribucionPorCategoria: {
+        [CategoriaContrato.SERVICIOS]: 0,
+        [CategoriaContrato.COMPRAS]: 0,
+        [CategoriaContrato.VENTAS]: 0,
+        [CategoriaContrato.ARRENDAMIENTO]: 0,
+        [CategoriaContrato.LABORAL]: 0,
+        [CategoriaContrato.CONFIDENCIALIDAD]: 0,
+        [CategoriaContrato.CONSULTORIA]: 0,
+        [CategoriaContrato.MANTENIMIENTO]: 0,
+        [CategoriaContrato.SUMINISTRO]: 0,
+        [CategoriaContrato.OTRO]: 0
+      },
+      distribucionPorEstado: {
+        [EstadoContrato.BORRADOR]: 0,
+        [EstadoContrato.REVISION]: 0,
+        [EstadoContrato.APROBADO]: 0,
+        [EstadoContrato.ACTIVO]: 0,
+        [EstadoContrato.VENCIDO]: 0,
+        [EstadoContrato.CANCELADO]: 0,
+        [EstadoContrato.RENOVADO]: 0
+      },
       tendenciaMensual: []
     }
   }
@@ -286,8 +304,8 @@ export class ProjectService {
       const proyectos = await this.obtenerProyectos()
       
       const totalProyectos = proyectos.length
-      const proyectosActivos = proyectos.filter(p => p.estado === 'EN_CURSO').length
-      const proyectosCompletados = proyectos.filter(p => p.estado === 'COMPLETADO').length
+      const proyectosActivos = proyectos.filter(p => p.estado === EstadoProyecto.EN_CURSO).length
+      const proyectosCompletados = proyectos.filter(p => p.estado === EstadoProyecto.COMPLETADO).length
       const valorTotalProyectos = proyectos.reduce((sum, p) => sum + p.presupuestoTotal, 0)
       
       const proyectosPorEstado = proyectos.reduce((acc, p) => {

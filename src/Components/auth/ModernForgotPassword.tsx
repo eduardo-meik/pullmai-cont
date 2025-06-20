@@ -51,26 +51,24 @@ const ModernForgotPassword: React.FC = () => {
       }
       
       await resetPassword(email)
-      setSuccess(true)
-    } catch (error: any) {
+      setSuccess(true)    } catch (error: any) {
       console.error('Password reset error:', error)
-      let errorMessage = 'Error al enviar el correo de recuperación'
       
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No existe una cuenta con este correo electrónico'
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Correo electrónico inválido'
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Demasiados intentos. Intenta más tarde'
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Error de conexión. Verifica tu conexión a internet'
-      } else if (error.code === 'auth/invalid-api-key') {
-        errorMessage = 'Error de configuración. Contacta al administrador'
-      } else if (error.message) {
-        errorMessage = `Error: ${error.message}`
+      const errorMap: { [key: string]: string } = {
+        'auth/user-not-found': 'No existe una cuenta con este correo electrónico',
+        'auth/invalid-email': 'Correo electrónico inválido',
+        'auth/too-many-requests': 'Demasiados intentos de recuperación. Intenta más tarde',
+        'auth/network-request-failed': 'Error de conexión. Verifica tu internet e intenta nuevamente',
+        'auth/invalid-api-key': 'Error de configuración. Contacta al administrador',
+        'auth/quota-exceeded': 'Se ha excedido el límite de solicitudes. Intenta más tarde',
+        'auth/timeout': 'La solicitud ha tardado demasiado. Intenta nuevamente'
       }
       
+      const errorMessage = errorMap[error.code] || error.message || 'Error inesperado al enviar el correo de recuperación'
       setErrors({ general: errorMessage })
+      
+      // Focus back on email field
+      emailRef.current?.focus()
     } finally {
       setLoading(false)
     }

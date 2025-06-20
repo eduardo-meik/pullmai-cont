@@ -53,6 +53,25 @@ const ModernLogin: React.FC = () => {
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
+  const getFirebaseErrorMessage = (errorCode: string): string => {
+    const errorMap: { [key: string]: string } = {
+      'auth/user-not-found': 'No existe una cuenta con este correo electrónico',
+      'auth/wrong-password': 'Contraseña incorrecta',
+      'auth/invalid-email': 'Correo electrónico inválido',
+      'auth/user-disabled': 'Esta cuenta ha sido deshabilitada. Contacta al administrador',
+      'auth/too-many-requests': 'Demasiados intentos fallidos. Intenta más tarde o restablece tu contraseña',
+      'auth/invalid-credential': 'Credenciales inválidas. Verifica tu correo y contraseña',
+      'auth/network-request-failed': 'Error de conexión. Verifica tu internet e intenta nuevamente',
+      'auth/timeout': 'La solicitud ha tardado demasiado. Intenta nuevamente',
+      'auth/quota-exceeded': 'Se ha excedido el límite de solicitudes. Intenta más tarde',
+      'auth/popup-closed-by-user': 'Inicio de sesión cancelado',
+      'auth/popup-blocked': 'Popup bloqueado. Permite popups para este sitio y recarga la página',
+      'auth/cancelled-popup-request': 'Solicitud de popup cancelada',
+      'auth/account-exists-with-different-credential': 'Ya existe una cuenta con este correo usando un método diferente'
+    }
+    
+    return errorMap[errorCode] || 'Error inesperado al iniciar sesión. Intenta nuevamente'
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,24 +82,27 @@ const ModernLogin: React.FC = () => {
       setLoading(true)
       setErrors({})
       
-      await login(emailRef.current?.value, passwordRef.current?.value)
-      navigate('/')
-    } catch (error: any) {
-      let errorMessage = 'Error al iniciar sesión'
+      const email = emailRef.current?.value
+      const password = passwordRef.current?.value
       
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No existe una cuenta con este correo electrónico'
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Contraseña incorrecta'
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Correo electrónico inválido'
-      } else if (error.code === 'auth/user-disabled') {
-        errorMessage = 'Esta cuenta ha sido deshabilitada'
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Demasiados intentos fallidos. Intenta más tarde'
+      if (!email || !password) {
+        setErrors({ general: 'Email y contraseña son requeridos' })
+        return
       }
       
+      await login(email, password)
+      navigate('/')
+    } catch (error: any) {
+      console.error('Login error:', error)
+      const errorMessage = getFirebaseErrorMessage(error.code)
       setErrors({ general: errorMessage })
+      
+      // Focus on email field if user not found, password field if wrong password
+      if (error.code === 'auth/user-not-found') {
+        emailRef.current?.focus()
+      } else if (error.code === 'auth/wrong-password') {
+        passwordRef.current?.focus()
+      }
     } finally {
       setLoading(false)
     }
@@ -99,12 +121,12 @@ const ModernLogin: React.FC = () => {
       
       navigate('/')
     } catch (error: any) {
-      let errorMessage = `Error al iniciar sesión con ${provider === 'google' ? 'Google' : 'GitHub'}`
+      console.error(`${provider} login error:`, error)
+      let errorMessage = getFirebaseErrorMessage(error.code)
       
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Inicio de sesión cancelado'
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Popup bloqueado. Permite popups para este sitio'
+      // If no specific message found, use generic social login error
+      if (errorMessage === 'Error inesperado al iniciar sesión. Intenta nuevamente') {
+        errorMessage = `Error al iniciar sesión con ${provider === 'google' ? 'Google' : 'GitHub'}. Intenta nuevamente`
       }
       
       setErrors({ general: errorMessage })

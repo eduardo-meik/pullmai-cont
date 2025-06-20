@@ -1,0 +1,65 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "contratos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "proyecto",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaCreacion",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "contratos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "proyectoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaCreacion",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "contratos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "organizacionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaCreacion",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "contratos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "organizacionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaCreacion",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,157 @@
+// Reglas de seguridad de Firestore para PRODUCCIÓN
+// Sistema de Control de Acceso Basado en Roles (RBAC)
+// Jerarquía: Organización → Proyectos → Contratos
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función helper para verificar autenticación
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Función helper para obtener rol del usuario
+    function getUserRole() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol;
+    }
+    
+    // Función helper para obtener organización del usuario
+    function getUserOrganization() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.organizacionId;
+    }
+    
+    // Función helper para verificar si es super admin
+    function isSuperAdmin() {
+      return isSignedIn() && getUserRole() == 'super_admin';
+    }
+    
+    // Función helper para verificar si es admin de organización
+    function isOrgAdmin() {
+      return isSignedIn() && getUserRole() == 'org_admin';
+    }
+    
+    // Función helper para verificar si pertenece a la misma organización
+    function isSameOrganization(orgId) {
+      return isSignedIn() && getUserOrganization() == orgId;
+    }
+
+    // USUARIOS - Solo pueden ver/editar su propio perfil o admin
+    match /usuarios/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId || 
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+      );
+      allow write: if isSignedIn() && (
+        request.auth.uid == userId || 
+        isSuperAdmin()
+      );
+    }
+
+    // ORGANIZACIONES - Solo admins pueden gestionar
+    match /organizaciones/{orgId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || 
+        isSameOrganization(orgId)
+      );
+      allow write: if isSuperAdmin();
+    }
+
+    // PROYECTOS - Basado en organización y rol
+    match /proyectos/{projectId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || 
+        isSameOrganization(resource.data.organizacionId)
+      );
+      allow create: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(request.resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(request.resource.data.organizacionId))
+      );
+      allow update: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(resource.data.organizacionId))
+      );
+      allow delete: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+      );
+    }
+
+    // CONTRATOS - Basado en organización, proyecto y rol
+    match /contratos/{contractId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || 
+        isSameOrganization(resource.data.organizacionId)
+      );
+      allow create: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(request.resource.data.organizacionId)) ||
+        (getUserRole() in ['manager', 'user'] && isSameOrganization(request.resource.data.organizacionId))
+      );
+      allow update: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'user' && isSameOrganization(resource.data.organizacionId) && 
+         request.auth.uid == resource.data.responsableId)
+      );
+      allow delete: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(resource.data.organizacionId))
+      );
+    }
+
+    // REGISTROS DE AUDITORÍA - Solo lectura para admins
+    match /registros_auditoria/{auditId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+      );
+      allow create: if isSignedIn(); // Sistema puede crear automáticamente
+      allow update, delete: if false; // Auditoría es inmutable
+    }
+
+    // ARCHIVOS/STORAGE METADATA - Basado en contratos asociados
+    match /archivos/{fileId} {
+      allow read, write: if isSignedIn() && (
+        isSuperAdmin() || 
+        isSameOrganization(resource.data.organizacionId)
+      );
+    }
+
+    // CONFIGURACIÓN DEL SISTEMA - Solo super admins
+    match /configuracion/{configId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // NOTIFICACIONES - Solo el usuario propietario
+    match /notificaciones/{notificationId} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == resource.data.usuarioId ||
+        isSuperAdmin()
+      );
+    }
+
+    // PLANTILLAS - Basado en organización
+    match /plantillas/{templateId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || 
+        isSameOrganization(resource.data.organizacionId)
+      );
+      allow write: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+      );
+    }
+
+    // DENEGAR TODO LO DEMÁS
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

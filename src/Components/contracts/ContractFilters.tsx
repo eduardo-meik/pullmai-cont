@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, ChevronDownIcon, ChevronUpIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 import { useContractStore } from '../../stores/contractStore'
 import { EstadoContrato, CategoriaContrato, TipoEconomico, Periodicidad } from '../../types'
 import Button from '../ui/Button'
@@ -8,6 +8,37 @@ import Input from '../ui/Input'
 
 const ContractFilters: React.FC = () => {
   const { filtros, setFiltros, clearFiltros } = useContractStore()
+  const [expandedSections, setExpandedSections] = useState({
+    estado: true,
+    categoria: false,
+    tipo: false,
+    fechas: false,
+    montos: false,
+    otros: false
+  })
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
+
+  const dateRangePresets = [
+    { label: 'Últimos 7 días', days: 7 },
+    { label: 'Últimos 30 días', days: 30 },
+    { label: 'Últimos 90 días', days: 90 },
+    { label: 'Este año', days: 365 },
+  ]
+
+  const applyDatePreset = (days: number) => {
+    const today = new Date()
+    const startDate = new Date(today.getTime() - (days * 24 * 60 * 60 * 1000))
+    setFiltros({ 
+      fechaInicio: startDate,
+      fechaFin: today
+    })
+  }
 
   const estadosContrato = [
     { value: EstadoContrato.BORRADOR, label: 'Borrador' },

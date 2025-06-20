@@ -1,6 +1,7 @@
 import React from 'react'
 import DashboardStats from './dashboard/DashboardStats';
-import ContractList from './contracts/ContractList'
+import ContractTable from './contracts/ContractTable'
+import FirebaseTestComponent from './FirebaseTestComponent'
 
 export default function Dashboard() {
   return (
@@ -13,6 +14,9 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {/* Firebase Connection Test */}
+      <FirebaseTestComponent />
+
       {/* Estadísticas */}
       <DashboardStats />
 
@@ -21,7 +25,7 @@ export default function Dashboard() {
         <h2 className="text-xl font-semibold text-gray-900 mb-6">
           Contratos Recientes
         </h2>
-        <ContractList />
+        <ContractTable />
       </div>
     </div>
   )

@@ -9,7 +9,7 @@ import PrivateRoutes from './PrivateRoutes'
 import ForgotPassword from './ForgotPassword'
 import UpdateProfile from './UpdateProfile'
 import Projects from './Projects'
-import ContractList from './contracts/ContractList'
+import ContractModule from './contracts/ContractModule'
 import DashboardLayout from './layout/DashboardLayout'
 import ProjectList from './projects/ProjectList'
 import ProjectDetail from './projects/ProjectDetail'
@@ -49,7 +49,7 @@ function App() {
           <Route element={<PrivateRoutes />}>
             <Route element={<DashboardLayout />}>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/contratos" element={<ContractList />} />
+              <Route path="/contratos" element={<ContractModule />} />
               <Route path="/update-profile" element={<UpdateProfile />} />
               <Route path="/projects" element={<ProjectList />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />

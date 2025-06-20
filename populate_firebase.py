@@ -438,6 +438,124 @@ def verify_data(db):
     except Exception as e:
         print(f"❌ Error verificando datos: {e}")
 
+def update_organizacion_id(db, new_org_id: str):
+    """Actualiza el campo organizacionId de todos los contratos y proyectos existentes"""
+    print(f"\n🔗 Actualizando organizacionId a '{new_org_id}' en contratos y proyectos...")
+    # Actualizar contratos
+    contratos_ref = db.collection('contratos')
+    contratos = contratos_ref.get()
+    updated_contracts = 0
+    for doc in contratos:
+        try:
+            doc.reference.update({"organizacionId": new_org_id})
+            updated_contracts += 1
+        except Exception as e:
+            print(f"❌ Error actualizando contrato {doc.id}: {e}")
+    print(f"✅ Contratos actualizados: {updated_contracts}")
+    # Actualizar proyectos
+    proyectos_ref = db.collection('proyectos')
+    proyectos = proyectos_ref.get()
+    updated_projects = 0
+    for doc in proyectos:
+        try:
+            doc.reference.update({"organizacionId": new_org_id})
+            updated_projects += 1
+        except Exception as e:
+            print(f"❌ Error actualizando proyecto {doc.id}: {e}")
+    print(f"✅ Proyectos actualizados: {updated_projects}")
+
+def update_meiklabs_users(db):
+    """Actualiza usuarios con email @meiklabs.com para vincularlos a MEIK LABS"""
+    print(f"\n👥 Actualizando usuarios con email @meiklabs.com a organización 'MEIK LABS'...")
+    
+    # Obtener todos los usuarios
+    usuarios_ref = db.collection('usuarios')
+    usuarios = usuarios_ref.get()
+    
+    updated_users = 0
+    meiklabs_users = 0
+    
+    for doc in usuarios:
+        try:
+            user_data = doc.to_dict()
+            email = user_data.get('email', '')
+            
+            if email.endswith('@meiklabs.com'):
+                meiklabs_users += 1
+                # Actualizar el organizacionId a MEIK LABS
+                doc.reference.update({"organizacionId": "MEIK LABS"})
+                updated_users += 1
+                print(f"✅ Usuario actualizado: {email}")
+                
+        except Exception as e:
+            print(f"❌ Error actualizando usuario {doc.id}: {e}")
+    
+    print(f"✅ Usuarios @meiklabs.com encontrados: {meiklabs_users}")
+    print(f"✅ Usuarios actualizados: {updated_users}")
+    
+    return updated_users
+
+def update_specific_users(db):
+    """Actualiza usuarios específicos con roles y organización"""
+    print(f"\n👥 Actualizando usuarios específicos...")
+    
+    users_to_update = [
+        {
+            "uid": "sGcgoyn0GJcb5bbSKN6auhOsFaj1",
+            "role": "org_admin",  # Maximum level role for organization
+            "organizacionId": "MEIK LABS"
+        },
+        {
+            "uid": "ho35QVyBvHR9EJaTI2VzO9Y25FJ2", 
+            "role": "super_admin",  # Super Admin
+            "organizacionId": "MEIK LABS"
+        },
+        {
+            "uid": "1Gc0SFaXkXZaGeIr86X2L1Gc7ev1",
+            "role": "user",  # Regular user
+            "organizacionId": "MEIK LABS"
+        }
+    ]
+    
+    usuarios_ref = db.collection('usuarios')
+    updated_users = 0
+    
+    for user_data in users_to_update:
+        try:
+            user_ref = usuarios_ref.document(user_data["uid"])
+            user_doc = user_ref.get()
+            
+            if user_doc.exists:
+                # Update existing user
+                user_ref.update({
+                    "rol": user_data["role"],
+                    "organizacionId": user_data["organizacionId"]
+                })
+                print(f"✅ Usuario actualizado: {user_data['uid']} -> {user_data['role']} en {user_data['organizacionId']}")
+            else:
+                # Create new user document if it doesn't exist
+                user_ref.set({
+                    "id": user_data["uid"],
+                    "email": f"user{updated_users + 1}@meiklabs.com",  # Placeholder email
+                    "nombre": f"Usuario",
+                    "apellido": f"{updated_users + 1}",
+                    "rol": user_data["role"],
+                    "organizacionId": user_data["organizacionId"],
+                    "departamento": "General",
+                    "activo": True,
+                    "fechaCreacion": datetime.now(),
+                    "permisos": [],
+                    "asignaciones": []
+                })
+                print(f"✅ Usuario creado: {user_data['uid']} -> {user_data['role']} en {user_data['organizacionId']}")
+            
+            updated_users += 1
+            
+        except Exception as e:
+            print(f"❌ Error actualizando usuario {user_data['uid']}: {e}")
+    
+    print(f"✅ Usuarios específicos actualizados: {updated_users}")
+
 def main():
     """Función principal"""
     print("🔥 Firebase Firestore - Poblador de Contratos")
@@ -476,4 +594,28 @@ def main():
         print("💡 Tip: Asegúrate de que las reglas de Firestore permitan escritura.")
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if len(sys.argv) > 1:
+        db = initialize_firebase()
+        if not db:
+            print("❌ No se pudo inicializar Firebase")
+            exit(1)
+            
+        if sys.argv[1] == "link_meiklabs":
+            update_organizacion_id(db, "MEIK LABS")
+            print("\n🎉 Todos los contratos y proyectos ahora están vinculados a MEIK LABS!")
+        elif sys.argv[1] == "update_users":
+            updated_count = update_meiklabs_users(db)
+            print(f"\n🎉 {updated_count} usuarios @meiklabs.com ahora están vinculados a MEIK LABS!")
+        elif sys.argv[1] == "update_specific_users":
+            update_specific_users(db)
+            print("\n🎉 Usuarios específicos actualizados correctamente!")
+        elif sys.argv[1] == "all":
+            update_organizacion_id(db, "MEIK LABS")
+            updated_count = update_meiklabs_users(db)
+            print(f"\n🎉 Todos los datos ahora están vinculados a MEIK LABS!")
+            print(f"   📊 Usuarios actualizados: {updated_count}")
+        else:
+            print("❌ Opciones válidas: link_meiklabs, update_users, update_specific_users, all")
+    else:
+        main()
