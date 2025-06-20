@@ -1,4 +1,4 @@
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { Usuario } from '../types'
 
@@ -8,7 +8,7 @@ export class UserService {
    */
   static async getUserProfile(uid: string): Promise<Usuario | null> {
     try {
-      const userDoc = await getDoc(doc(db, 'usuarios', uid))
+      const userDoc = await getDoc(doc(db, 'users', uid))
       if (userDoc.exists()) {
         return { id: userDoc.id, ...userDoc.data() } as Usuario
       }
@@ -20,25 +20,52 @@ export class UserService {
   }
 
   /**
-   * Gets organization ID for the current user
-   * TODO: This should be integrated with the auth context
+   * Updates user profile data in Firestore
    */
-  static async getUserOrganizationId(uid: string): Promise<string> {
+  static async updateUserProfile(uid: string, userData: Partial<Usuario>): Promise<void> {
     try {
-      const userProfile = await this.getUserProfile(uid)
-      return userProfile?.organizacionId || 'org-001' // Fallback to default org
+      const userRef = doc(db, 'users', uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (userDoc.exists()) {
+        await updateDoc(userRef, {
+          ...userData,
+          ultimoAcceso: new Date()
+        })
+      } else {
+        await setDoc(userRef, {
+          id: uid,
+          ...userData,
+          fechaCreacion: new Date(),
+          ultimoAcceso: new Date(),
+          permisos: userData.permisos || [],
+          asignaciones: userData.asignaciones || []
+        })
+      }
     } catch (error) {
-      console.error('Error getting user organization:', error)
-      return 'org-001' // Fallback to default org
+      console.error('Error updating user profile:', error)
+      throw error
     }
   }
 
   /**
-   * Gets default organization ID - temporary solution
-   * TODO: Replace with actual user organization lookup
+   * Gets organization ID for the current user
+   */
+  static async getUserOrganizationId(uid: string): Promise<string> {
+    try {
+      const userProfile = await this.getUserProfile(uid)
+      return userProfile?.organizacionId || 'MEIK LABS' // Updated fallback
+    } catch (error) {
+      console.error('Error getting user organization:', error)
+      return 'MEIK LABS' // Updated fallback
+    }
+  }
+
+  /**
+   * Gets default organization ID
    */
   static getDefaultOrganizationId(): string {
-    return 'org-001'
+    return 'MEIK LABS'
   }
 }
 

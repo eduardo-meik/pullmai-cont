@@ -5,9 +5,9 @@ import { UserIcon, EnvelopeIcon, BuildingOfficeIcon, UserGroupIcon, EyeIcon, Eye
 import { ETypes, MessageCard } from './Atoms/MessageCard'
 import { AiFillExclamationCircle } from 'react-icons/ai'
 import { useToast, EToastTypes } from '../contexts/ToastContext'
-import { db } from '../firebase'
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore'
 import { Usuario, UserRole } from '../types'
+import UserService from '../services/userService'
+import { useAuthStore } from '../stores/authStore'
 
 interface UserProfileData {
   nombre: string
@@ -21,6 +21,7 @@ interface UserProfileData {
 
 export default function UpdateProfile() {
   const { currentUser, updatePassword, updateEmail, updateUserProfile } = useAuth()
+  const { setUsuario } = useAuthStore()
   const { showTypedToast } = useToast()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -40,15 +41,14 @@ export default function UpdateProfile() {
     passwordConfirm: ''
   })
 
-  // Cargar datos del perfil del usuario desde Firestore
+  // Cargar datos del perfil del usuario desde Firestore usando UserService
   useEffect(() => {
     const loadUserProfile = async () => {
       if (!currentUser) return
       
       try {
-        const userDoc = await getDoc(doc(db, 'usuarios', currentUser.uid))
-        if (userDoc.exists()) {
-          const userData = userDoc.data() as Usuario
+        const userData = await UserService.getUserProfile(currentUser.uid)
+        if (userData) {
           setFormData(prev => ({
             ...prev,
             nombre: userData.nombre || '',
@@ -108,9 +108,9 @@ export default function UpdateProfile() {
     if (formData.password && formData.password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres')
       return false
-    }
-    return true
+    }    return true
   }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -137,23 +137,15 @@ export default function UpdateProfile() {
 
         console.log('Datos a guardar en Firestore (modo prueba):', userProfileData)
 
-        const userDoc = await getDoc(doc(db, 'usuarios', currentUser.uid))
+        await UserService.updateUserProfile(currentUser.uid, userProfileData)
         
-        if (userDoc.exists()) {
-          console.log('Actualizando documento existente en Firestore (modo prueba)')
-          await updateDoc(doc(db, 'usuarios', currentUser.uid), userProfileData)
-        } else {
-          console.log('Creando nuevo documento en Firestore (modo prueba)')
-          await setDoc(doc(db, 'usuarios', currentUser.uid), {
-            ...userProfileData,
-            fechaCreacion: new Date(),
-            permisos: []
-          })
-        }
-
-        console.log('Perfil actualizado exitosamente (modo prueba)')
+        // Update the auth store with the new user data
+        const updatedUser = await UserService.getUserProfile(currentUser.uid)
+        if (updatedUser) {
+          setUsuario(updatedUser)
+        }        console.log('Perfil actualizado exitosamente (modo prueba)')
         showTypedToast(EToastTypes.SUCCESS, 'Perfil actualizado exitosamente (solo datos del perfil)')
-        navigate('/dashboard')
+        navigate('/')
         return
       }
 
@@ -188,7 +180,7 @@ export default function UpdateProfile() {
         console.log('Actualizaciones de autenticación completadas')
       }
 
-      // Step 2: Update Firestore profile
+      // Step 2: Update Firestore profile using UserService
       console.log('Iniciando actualización de Firestore')
       const userProfileData: Partial<Usuario> = {
         id: currentUser.uid,
@@ -203,22 +195,15 @@ export default function UpdateProfile() {
 
       console.log('Datos a guardar en Firestore:', userProfileData)
 
-      // Verificar si el documento ya existe
-      const userDoc = await getDoc(doc(db, 'usuarios', currentUser.uid))
+      await UserService.updateUserProfile(currentUser.uid, userProfileData)
       
-      if (userDoc.exists()) {
-        console.log('Actualizando documento existente en Firestore')
-        await updateDoc(doc(db, 'usuarios', currentUser.uid), userProfileData)
-      } else {
-        console.log('Creando nuevo documento en Firestore')
-        await setDoc(doc(db, 'usuarios', currentUser.uid), {
-          ...userProfileData,
-          fechaCreacion: new Date(),
-          permisos: []
-        })
+      // Update the auth store with the new user data
+      const updatedUser = await UserService.getUserProfile(currentUser.uid)
+      if (updatedUser) {
+        setUsuario(updatedUser)
       }      console.log('Perfil actualizado exitosamente')
       showTypedToast(EToastTypes.SUCCESS, 'Perfil actualizado exitosamente')
-      navigate('/dashboard')
+      navigate('/')
     } catch (err: any) {
       console.error('Error completo al actualizar perfil:', err)
       console.error('Error code:', err.code)

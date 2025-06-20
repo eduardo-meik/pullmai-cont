@@ -67,17 +67,15 @@ const ContractList: React.FC = () => {
   }, [userRole, userOrgId])
 
   const loadUserData = async () => {
-    if (!currentUser) return
-
-    try {
+    if (!currentUser) return    try {
       const { doc, getDoc, getFirestore } = await import('firebase/firestore')
       const db = getFirestore()
       const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
       
       if (userDoc.exists()) {
         const userData = userDoc.data()
-        setUserRole(userData.role || 'User')
-        setUserOrgId(userData.organization || '')
+        setUserRole(userData.rol || 'user')
+        setUserOrgId(userData.organizacionId || '')
       }
     } catch (error) {
       console.error('Error loading user data:', error)
