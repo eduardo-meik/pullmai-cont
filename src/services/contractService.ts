@@ -135,11 +135,12 @@ export class ContractService {
         const documentoRef = ref(storage, documentoPath)
         
         try {
-          const uploadResult = await uploadBytes(documentoRef, formulario.documento)
-          pdfUrl = await getDownloadURL(uploadResult.ref)
+          await uploadBytes(documentoRef, formulario.documento)
+          // Store the relative path instead of the full download URL
+          pdfUrl = documentoPath 
           documentoNombre = formulario.documento.name
           documentoTamaño = formulario.documento.size
-          console.log('Document uploaded successfully:', pdfUrl)
+          console.log('Document uploaded successfully, path stored:', pdfUrl)
         } catch (uploadError) {
           console.error('Error uploading document:', uploadError)
           throw new Error(`Error al subir el documento: ${uploadError instanceof Error ? uploadError.message : 'Error desconocido'}`)        }

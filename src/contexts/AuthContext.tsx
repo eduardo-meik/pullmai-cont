@@ -97,6 +97,9 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        const tokenResult = await user.getIdTokenResult();
+        console.log('DEBUG: User authenticated. Claims:', tokenResult.claims);
+
         let userProfile = await UserService.getUserProfile(user.uid)
         
         // If no user profile exists, create a default one

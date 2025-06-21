@@ -85,42 +85,44 @@ class AuthenticatedPDFService {
    */
   extractStoragePath(url: string): string {
     try {
-      // Handle gs://bucket/path/to/file format
-      if (url.startsWith('gs://')) {
-        return url.replace(/^gs:\/\/[^/]+\//, '')
+      // Create a URL object to easily access parts of the URL
+      const urlObj = new URL(url);
+      
+      // The full path we need to parse is in the pathname property
+      const pathname = urlObj.pathname;
+
+      // Find the '/o/' separator in the path. This is standard for Firebase Storage URLs.
+      // The actual file path is the URL-encoded string that follows '/o/'.
+      const oIndex = pathname.indexOf('/o/');
+      
+      if (oIndex !== -1) {
+        // Extract the encoded path part, removing any query parameters
+        const pathWithQuery = pathname.substring(oIndex + 3); // +3 to skip '/o/'
+        const pathOnly = pathWithQuery.split('?')[0];
+
+        // Decode the path to handle characters like '/' (%2F) and spaces (%20)
+        const decodedPath = decodeURIComponent(pathOnly);
+        
+        console.log('Successfully extracted and decoded path:', decodedPath);
+        return decodedPath;
       }
 
-      // Handle https://storage.googleapis.com/bucket/path/to/file format
-      if (url.includes('googleapis.com')) {
-        const urlObj = new URL(url)
-        // The pathname is /<bucket>/<path-to-file>. We need to remove the leading slash and the bucket name.
-        const pathParts = urlObj.pathname.substring(1).split('/')
-        pathParts.shift() // Remove the bucket name from the parts array
-        return decodeURIComponent(pathParts.join('/'))
+      // Fallback for gs:// URLs
+      if (url.startsWith('gs://')) {
+        const path = url.substring(url.indexOf('/', 5) + 1);
+        console.log('Extracted GS path:', path);
+        return path;
       }
-      
-      // Handle Firebase download URLs (less common now, but good for robustness)
-      if (url.includes('firebaseapp.com') || url.includes('appspot.com')) {
-        const urlObj = new URL(url)
-        const pathMatch = urlObj.pathname.match(/\/o\/(.+)/)
-        if (pathMatch && pathMatch[1]) {
-          // The matched path is URL-encoded, so we decode it.
-          const decodedPath = decodeURIComponent(pathMatch[1])
-          // It might also contain the bucket name if it's a non-standard URL.
-          if (decodedPath.startsWith(this.getBucketName())) {
-            return decodedPath.replace(this.getBucketName() + '/', '')
-          }
-          return decodedPath
-        }
-      }
-      
-      // If no other format matches, assume the URL is already a valid path.
-      console.warn('Could not parse URL, assuming it is a valid path:', url)
-      return url
-      
+
+      // If the URL doesn't match the expected Firebase Storage format,
+      // it might be a direct path already. Log a warning and return it.
+      console.warn('Could not parse Firebase Storage URL, assuming it is a valid path:', url);
+      return url;
+
     } catch (error) {
-      console.error('Error extracting storage path from URL:', url, error)
-      return url // Fallback to the original URL
+      console.error('Error extracting storage path from URL:', url, error);
+      // Fallback to the original URL in case of an unexpected error
+      return url;
     }
   }
 
