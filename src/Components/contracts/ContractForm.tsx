@@ -12,8 +12,10 @@ import Button from '../ui/Button'
 import Input from '../ui/Input'
 import ProjectSelect from '../projects/ProjectSelect'
 import FileStorageService, { FileUploadProgress } from '../../services/fileStorageService'
+import { contractService } from '../../services/contractService'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
+import { useAuthStore } from '../../stores/authStore'
 
 interface ContractFormProps {
   isOpen: boolean
@@ -30,6 +32,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
 }) => {
   const { showToast } = useToast()
   const { currentUser } = useAuth()
+  const { usuario } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState<FileUploadProgress | null>(null)
@@ -86,39 +89,65 @@ const ContractForm: React.FC<ContractFormProps> = ({
 
     try {
       setLoading(true)
-      setUploadProgress({ progress: 0, status: 'uploading' })
-        let fileUrl = ''
+      setUploadProgress({ progress: 0, status: 'uploading' })      // Handle file metadata (upload will be handled by contractService)
+      let fileUrl = ''
       let fileName = uploadedFile?.name || 'documento.pdf'
       let fileSize = uploadedFile?.size || 0
       
-      // Upload file if there's a new one
-      if (uploadedFile) {
-        const contractId = `contract_${Date.now()}` // Generate temporary ID
-        const organizationId = 'org-001' // TODO: Get actual organization ID
-        
-        const uploadResult = await FileStorageService.uploadContractPDF(
-          uploadedFile,
-          contractId,
-          organizationId,
-          setUploadProgress
-        )
-        
-        fileUrl = uploadResult.url
-        fileName = uploadResult.fileName
-        fileSize = uploadResult.fileSize
-      }
+      // Note: File upload is handled by contractService.crearContrato method
+      // No duplicate upload needed here
       
-      // Here you would save the contract data to the database
-      // Including the file URL, name, and size
+      // Save the contract data to the database
       const contractData = {
         ...formData,
         pdfUrl: fileUrl,
         documentoNombre: fileName,
-        documentoTamaño: fileSize
+        documentoTamaño: fileSize,
+        organizacionId: usuario?.organizacionId || 'default-org',
+        usuarioCreadorId: currentUser?.uid || '',
+        fechaCreacion: new Date(),
+        fechaUltimaModificacion: new Date()
       }
-      
-      // Simulate saving to database
-      await new Promise(resolve => setTimeout(resolve, 1000))
+        console.log('Saving contract to database:', contractData)
+        if (contractToEdit && 'id' in contractToEdit) {
+        // Update existing contract - convert string dates to Date objects
+        const updateData = {
+          titulo: formData.titulo,
+          descripcion: formData.descripcion,
+          contraparte: formData.contraparte,
+          fechaInicio: new Date(formData.fechaInicio),
+          fechaTermino: new Date(formData.fechaTermino),
+          monto: formData.monto,
+          moneda: formData.moneda,
+          categoria: formData.categoria,
+          periodicidad: formData.periodicidad,
+          tipo: formData.tipo,
+          proyecto: formData.proyecto,
+          proyectoId: formData.proyectoId,
+          estado: formData.estado,
+          departamento: formData.departamento,
+          etiquetas: formData.etiquetas,
+          pdfUrl: fileUrl,
+          documentoNombre: fileName,
+          documentoTamaño: fileSize,
+          fechaUltimaModificacion: new Date()
+        }
+        await contractService.actualizarContrato((contractToEdit as any).id, updateData, currentUser?.uid || '')      } else {
+        // Create new contract - pass the file directly so the service can handle upload
+        console.log('Creating new contract with organization:', usuario?.organizacionId)
+        console.log('Current user:', currentUser?.uid)
+        console.log('Upload file present:', !!uploadedFile)
+        
+        const contratoCompleto = {
+          ...formData,
+          documento: uploadedFile || undefined
+        }
+        await contractService.crearContrato(
+          contratoCompleto, 
+          usuario?.organizacionId || 'default-org', 
+          currentUser?.uid || ''
+        )
+      }
       
       setUploadProgress({ progress: 100, status: 'completed' })
       
@@ -154,21 +183,12 @@ const ContractForm: React.FC<ContractFormProps> = ({
       {isOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
-              onClick={onClose}
-            />
-
             {/* Modal */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg"
+              className="inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle bg-white shadow-xl rounded-lg"
             >
               {/* Header */}
               <div className="flex items-center justify-between pb-4 border-b border-gray-200">
@@ -191,14 +211,12 @@ const ContractForm: React.FC<ContractFormProps> = ({
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Título del Contrato *
-                      </label>
-                      <input
-                        type="text"
+                      </label>                      <input                        type="text"
                         value={formData.titulo}
                         onChange={(e) => handleInputChange('titulo', e.target.value)}
                         placeholder="Ej: Contrato de Servicios de Consultoría"
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                       />
                     </div>
 
@@ -206,13 +224,12 @@ const ContractForm: React.FC<ContractFormProps> = ({
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Descripción
-                      </label>
-                      <textarea
+                      </label>                      <textarea
                         value={formData.descripcion}
                         onChange={(e) => handleInputChange('descripcion', e.target.value)}
                         placeholder="Descripción detallada del contrato..."
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                       />
                     </div>
 
@@ -220,14 +237,13 @@ const ContractForm: React.FC<ContractFormProps> = ({
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Contraparte *
-                      </label>
-                      <input
+                      </label>                      <input
                         type="text"
                         value={formData.contraparte}
                         onChange={(e) => handleInputChange('contraparte', e.target.value)}
                         placeholder="Nombre de la empresa o persona"
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                       />
                     </div>
 
@@ -236,25 +252,23 @@ const ContractForm: React.FC<ContractFormProps> = ({
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Fecha Inicio *
-                        </label>
-                        <input
+                        </label>                        <input
                           type="date"
                           value={formData.fechaInicio}
                           onChange={(e) => handleInputChange('fechaInicio', e.target.value)}
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Fecha Término *
-                        </label>
-                        <input
+                        </label>                        <input
                           type="date"
                           value={formData.fechaTermino}
                           onChange={(e) => handleInputChange('fechaTermino', e.target.value)}
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                         />
                       </div>
                     </div>
@@ -264,8 +278,7 @@ const ContractForm: React.FC<ContractFormProps> = ({
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Monto *
-                        </label>
-                        <input
+                        </label>                        <input
                           type="number"
                           value={formData.monto}
                           onChange={(e) => handleInputChange('monto', parseFloat(e.target.value) || 0)}
@@ -273,17 +286,16 @@ const ContractForm: React.FC<ContractFormProps> = ({
                           min="0"
                           step="0.01"
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Moneda
-                        </label>
-                        <select
+                        </label>                        <select
                           value={formData.moneda}
                           onChange={(e) => handleInputChange('moneda', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                         >
                           <option value="CLP">CLP</option>
                           <option value="USD">USD</option>
@@ -297,11 +309,10 @@ const ContractForm: React.FC<ContractFormProps> = ({
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Categoría
-                        </label>
-                        <select
+                        </label>                        <select
                           value={formData.categoria}
                           onChange={(e) => handleInputChange('categoria', e.target.value as CategoriaContrato)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                         >
                           {Object.values(CategoriaContrato).map(categoria => (
                             <option key={categoria} value={categoria}>
@@ -313,11 +324,10 @@ const ContractForm: React.FC<ContractFormProps> = ({
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Tipo Económico
-                        </label>
-                        <select
+                        </label>                        <select
                           value={formData.tipo}
                           onChange={(e) => handleInputChange('tipo', e.target.value as TipoEconomico)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                         >
                           {Object.values(TipoEconomico).map(tipo => (
                             <option key={tipo} value={tipo}>
@@ -332,11 +342,10 @@ const ContractForm: React.FC<ContractFormProps> = ({
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Periodicidad
-                      </label>
-                      <select
+                      </label>                      <select
                         value={formData.periodicidad}
                         onChange={(e) => handleInputChange('periodicidad', e.target.value as Periodicidad)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                       >
                         {Object.values(Periodicidad).map(periodicidad => (
                           <option key={periodicidad} value={periodicidad}>
@@ -476,11 +485,10 @@ const ContractForm: React.FC<ContractFormProps> = ({
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Estado
-                      </label>
-                      <select
+                      </label>                      <select
                         value={formData.estado}
                         onChange={(e) => handleInputChange('estado', e.target.value as EstadoContrato)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                       >
                         {Object.values(EstadoContrato).map(estado => (
                           <option key={estado} value={estado}>
@@ -494,13 +502,12 @@ const ContractForm: React.FC<ContractFormProps> = ({
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Departamento
-                      </label>
-                      <input
+                      </label>                      <input
                         type="text"
                         value={formData.departamento}
                         onChange={(e) => handleInputChange('departamento', e.target.value)}
                         placeholder="Departamento responsable"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                       />
                     </div>
 
@@ -508,15 +515,13 @@ const ContractForm: React.FC<ContractFormProps> = ({
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Etiquetas
-                      </label>
-                      <input
+                      </label>                      <input
                         type="text"
                         placeholder="Separadas por comas: urgente, confidencial"
                         onChange={(e) => {
                           const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
-                          handleInputChange('etiquetas', tags)
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          handleInputChange('etiquetas', tags)                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
                       />
                       {formData.etiquetas.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">

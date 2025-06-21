@@ -17,6 +17,7 @@ import { Contrato, FormularioContrato, Proyecto } from '../../types'
 import ContractForm from './ContractForm'
 import ContractPDFViewer from './ContractPDFViewer'
 import ContractProjectAssociation from './ContractProjectAssociation'
+import ContractDetail from './ContractDetail'
 import { motion, AnimatePresence } from 'framer-motion'
 import usePermissions from '../../hooks/usePermissions'
 import Button from '../ui/Button'
@@ -32,6 +33,7 @@ const ContractTable: React.FC = () => {
   const deleteContractMutation = useDeleteContract() // Reactivated delete functionality
   const [editingContract, setEditingContract] = useState<Contrato | null>(null)
   const [viewingPDF, setViewingPDF] = useState<{ url: string; title: string } | null>(null)
+  const [viewingContractDetail, setViewingContractDetail] = useState<Contrato | null>(null)
   const [showProjectAssociation, setShowProjectAssociation] = useState(false)
   const [selectedContracts, setSelectedContracts] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -428,15 +430,20 @@ const ContractTable: React.FC = () => {
                         className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                         onClick={(e) => e.stopPropagation()}
                       />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </td>                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {contract.titulo}
+                        <button
+                          onClick={() => setViewingContractDetail(contract)}
+                          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
+                          title="Ver detalles del contrato"
+                        >
+                          {contract.titulo}
+                        </button>
                       </div>
                       <div className="text-sm text-gray-500 truncate max-w-xs">
                         {contract.descripcion}
                       </div>
-                    </td>                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    </td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {contract.contraparte}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -453,7 +460,10 @@ const ContractTable: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">                      <div className="flex items-center justify-end space-x-2">                        {contract.pdfUrl && (
                           <button
-                            onClick={() => setViewingPDF({ url: contract.pdfUrl, title: contract.titulo })}
+                            onClick={() => {
+                              console.log('Opening PDF:', contract.pdfUrl)
+                              setViewingPDF({ url: contract.pdfUrl, title: contract.titulo })
+                            }}
                             className="text-blue-600 hover:text-blue-900 p-1 rounded"
                             title="Ver PDF"
                           >
@@ -670,9 +680,7 @@ const ContractTable: React.FC = () => {
           onClose={() => setViewingPDF(null)}
           pdfUrl={viewingPDF.url}
           contractTitle={viewingPDF.title}        />
-      )}
-
-      {/* Project Association Modal */}
+      )}      {/* Project Association Modal */}
       {showProjectAssociation && (
         <ContractProjectAssociation
           isOpen={showProjectAssociation}
@@ -680,6 +688,15 @@ const ContractTable: React.FC = () => {
           contracts={contracts.filter((c: Contrato) => selectedContracts.includes(c.id))}
           onAssociateContracts={handleAssociateContracts}
           title="Asociar Contratos a Proyecto"
+        />
+      )}
+
+      {/* Contract Detail Modal */}
+      {viewingContractDetail && (
+        <ContractDetail
+          isOpen={!!viewingContractDetail}
+          onClose={() => setViewingContractDetail(null)}
+          contract={viewingContractDetail}
         />
       )}
     </div>

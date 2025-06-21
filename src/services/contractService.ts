@@ -126,18 +126,33 @@ export class ContractService {
       let documentoNombre = ''
       let documentoTamaño = 0
 
-      if (formulario.documento) {
-        const documentoRef = ref(storage, `contratos/${Date.now()}_${formulario.documento.name}`)
-        const uploadResult = await uploadBytes(documentoRef, formulario.documento)
-        pdfUrl = await getDownloadURL(uploadResult.ref)
-        documentoNombre = formulario.documento.name
-        documentoTamaño = formulario.documento.size
-      }      // Crear contrato
+      if (formulario.documento) {        console.log('Uploading document:', formulario.documento.name, 'for organization:', organizacionId)
+        
+        // Use the organization ID directly (Firebase Storage handles spaces in paths)
+        const documentoPath = `contracts/${organizacionId}/contract_${Date.now()}`
+        console.log('Upload path:', documentoPath)
+        
+        const documentoRef = ref(storage, documentoPath)
+        
+        try {
+          const uploadResult = await uploadBytes(documentoRef, formulario.documento)
+          pdfUrl = await getDownloadURL(uploadResult.ref)
+          documentoNombre = formulario.documento.name
+          documentoTamaño = formulario.documento.size
+          console.log('Document uploaded successfully:', pdfUrl)
+        } catch (uploadError) {
+          console.error('Error uploading document:', uploadError)
+          throw new Error(`Error al subir el documento: ${uploadError instanceof Error ? uploadError.message : 'Error desconocido'}`)        }
+      }
+
+      // Crear contrato
       const contratoRef = doc(collection(db, this.collection))
       const contratoData: Omit<Contrato, 'id'> = {
         titulo: formulario.titulo,
         descripcion: formulario.descripcion,
-        contraparte: formulario.contraparte,        fechaInicio: new Date(formulario.fechaInicio),
+        contraparte: formulario.contraparte,
+        contraparteId: formulario.contraparteId || '', // Add contraparteId from form (optional for now)
+        fechaInicio: new Date(formulario.fechaInicio),
         fechaTermino: new Date(formulario.fechaTermino),
         monto: formulario.monto,
         moneda: formulario.moneda,

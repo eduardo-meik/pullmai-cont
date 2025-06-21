@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Organization-based access for contracts
+    match /contracts/{orgId}/{allPaths=**} {
+      allow read, write: if request.auth != null 
+        && (
+          // Allow access if user belongs to the same organization
+          request.auth.token.organizacionId == orgId ||
+          // Allow access if user has org_admin role for this organization
+          (request.auth.token.org_admin == true && request.auth.token.organizacionId == orgId) ||
+          // Allow access if user is a system admin
+          request.auth.token.admin == true
+        );
+    }
+    
+    // Legacy paths - apply same rules
+    match /contracts/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Spanish path for backward compatibility
+    match /contratos/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

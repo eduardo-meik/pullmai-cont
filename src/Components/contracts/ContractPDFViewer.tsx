@@ -4,9 +4,10 @@ import { XMarkIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from '@heroico
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css'
 import 'react-pdf/dist/esm/Page/TextLayer.css'
+import authenticatedPDFService from '../../services/authenticatedPDFService'
 
 // Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
 
 interface ContractPDFViewerProps {
   isOpen: boolean
@@ -27,17 +28,72 @@ const ContractPDFViewer: React.FC<ContractPDFViewerProps> = ({
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [authenticatedUrl, setAuthenticatedUrl] = useState<string | null>(null)  // Load authenticated PDF URL when component opens
+  React.useEffect(() => {
+    if (isOpen && pdfUrl) {
+      console.log('PDF Viewer opened with URL:', pdfUrl)
+      console.log('PDF.js worker source:', pdfjs.GlobalWorkerOptions.workerSrc)
+      
+      setLoading(true)
+      setError(null)
+      setAuthenticatedUrl(null)
+      
+      // Get authenticated PDF URL
+      const loadAuthenticatedPDF = async () => {
+        try {
+          // Extract storage path from URL if needed
+          const storagePath = authenticatedPDFService.extractStoragePath(pdfUrl)
+          console.log('Extracted storage path:', storagePath)
+          
+          // Get authenticated object URL
+          const objectUrl = await authenticatedPDFService.getPDFObjectUrl(storagePath)
+          console.log('Authenticated PDF object URL obtained:', objectUrl)
+          
+          setAuthenticatedUrl(objectUrl)
+          setLoading(false)
+          
+        } catch (error) {
+          console.error('Error loading authenticated PDF:', error)
+          setError(`Error al cargar el documento PDF: ${error instanceof Error ? error.message : 'Unknown error'}`)
+          setLoading(false)
+        }
+      }
+      
+      loadAuthenticatedPDF()
+      
+    } else if (isOpen && !pdfUrl) {
+      console.error('PDF Viewer opened without URL')
+      setLoading(false)
+      setError('No se proporcionó URL del documento PDF')
+    }
+  }, [isOpen, pdfUrl])
 
+  // Clean up object URL when component unmounts or closes
+  React.useEffect(() => {
+    return () => {
+      if (authenticatedUrl && authenticatedUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(authenticatedUrl)
+      }
+    }
+  }, [authenticatedUrl])
+
+  React.useEffect(() => {
+    if (!isOpen && authenticatedUrl && authenticatedUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(authenticatedUrl)
+      setAuthenticatedUrl(null)
+    }
+  }, [isOpen, authenticatedUrl])
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    console.log('PDF loaded successfully, pages:', numPages)
     setNumPages(numPages)
     setLoading(false)
     setError(null)
   }
 
   const onDocumentLoadError = (error: Error) => {
-    setLoading(false)
-    setError('Error al cargar el documento PDF')
     console.error('PDF load error:', error)
+    setLoading(false)
+    setError(`Error al cargar el documento PDF: ${error.message}`)
   }
 
   const goToPrevPage = () => {
@@ -55,16 +111,26 @@ const ContractPDFViewer: React.FC<ContractPDFViewerProps> = ({
   const zoomOut = () => {
     setScale(prev => Math.max(prev - 0.25, 0.5))
   }
-
   const resetZoom = () => {
     setScale(1.0)
   }
 
-  const downloadPDF = () => {
-    const link = document.createElement('a')
-    link.href = pdfUrl
-    link.download = `${contractTitle}.pdf`
-    link.click()
+  const downloadPDF = async () => {
+    try {
+      if (!pdfUrl) return
+      
+      // Get authenticated download URL
+      const storagePath = authenticatedPDFService.extractStoragePath(pdfUrl)
+      const authenticatedDownloadUrl = await authenticatedPDFService.getAuthenticatedPDFUrl(storagePath)
+      
+      const link = document.createElement('a')
+      link.href = authenticatedDownloadUrl
+      link.download = `${contractTitle}.pdf`
+      link.click()
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      setError(`Error al descargar el documento: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
   }
 
   return (
@@ -162,15 +228,34 @@ const ContractPDFViewer: React.FC<ContractPDFViewerProps> = ({
                   ) : (
                     <ArrowsPointingOutIcon className="h-5 w-5" />
                   )}
-                </button>
-
-                {/* Download Button */}
+                </button>                {/* Download Button */}
                 <button
                   onClick={downloadPDF}
                   className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
                   title="Descargar PDF"
                 >
                   Descargar
+                </button>
+
+                {/* Open in new tab with authenticated URL */}
+                <button
+                  onClick={async () => {
+                    try {
+                      if (authenticatedUrl) {
+                        window.open(authenticatedUrl, '_blank')
+                      } else {
+                        setError('Esperando a que se cargue el documento...')
+                      }
+                    } catch (error) {
+                      console.error('Error opening PDF in new tab:', error)
+                      setError('Error al abrir documento en nueva pestaña')
+                    }
+                  }}
+                  className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                  title="Abrir en nueva pestaña"
+                  disabled={!authenticatedUrl}
+                >
+                  Nueva pestaña
                 </button>
 
                 {/* Close Button */}
@@ -191,6 +276,11 @@ const ContractPDFViewer: React.FC<ContractPDFViewerProps> = ({
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                   <span className="ml-3 text-gray-600">Cargando documento...</span>
                 </div>
+              )}              {!pdfUrl && (
+                <div className="flex flex-col items-center justify-center h-64 text-center">
+                  <div className="text-gray-400 text-4xl mb-4">📄</div>
+                  <p className="text-gray-600">No se encontró el documento PDF</p>
+                </div>
               )}
 
               {error && (
@@ -198,7 +288,26 @@ const ContractPDFViewer: React.FC<ContractPDFViewerProps> = ({
                   <div className="text-red-500 text-4xl mb-4">⚠️</div>
                   <p className="text-gray-600 mb-4">{error}</p>
                   <button
-                    onClick={() => window.location.reload()}
+                    onClick={() => {
+                      setError(null)
+                      // Retry loading the PDF
+                      if (pdfUrl) {
+                        setLoading(true)
+                        const loadAuthenticatedPDF = async () => {
+                          try {
+                            const storagePath = authenticatedPDFService.extractStoragePath(pdfUrl)
+                            const objectUrl = await authenticatedPDFService.getPDFObjectUrl(storagePath)
+                            setAuthenticatedUrl(objectUrl)
+                            setLoading(false)
+                          } catch (error) {
+                            console.error('Error loading authenticated PDF:', error)
+                            setError(`Error al cargar el documento PDF: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                            setLoading(false)
+                          }
+                        }
+                        loadAuthenticatedPDF()
+                      }
+                    }}
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >
                     Reintentar
@@ -206,15 +315,20 @@ const ContractPDFViewer: React.FC<ContractPDFViewerProps> = ({
                 </div>
               )}
 
-              {!loading && !error && (
+              {!loading && !error && authenticatedUrl && (
                 <div className="p-4">
                   <Document
-                    file={pdfUrl}
+                    file={authenticatedUrl}
                     onLoadSuccess={onDocumentLoadSuccess}
                     onLoadError={onDocumentLoadError}
+                    options={{
+                      cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+                      cMapPacked: true,
+                    }}
                     loading={
                       <div className="flex items-center justify-center h-64">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                        <span className="ml-3 text-gray-600">Cargando documento...</span>
                       </div>
                     }
                   >

@@ -118,6 +118,10 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
         }
         
         setUsuario(userProfile)
+        // Debug: Print user's custom claims
+        user.getIdTokenResult().then(r => {
+          console.log('DEBUG: User custom claims:', r.claims)
+        })
       } else {
         logoutFromStore()
       }

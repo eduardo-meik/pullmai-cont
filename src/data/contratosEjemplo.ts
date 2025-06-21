@@ -7,6 +7,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Desarrollo de Sistema ERP",
     descripcion: "Desarrollo e implementación de sistema de planificación de recursos empresariales para gestión integral de la organización",
     contraparte: "TechSolutions SpA",
+    contraparteId: "org-tech-solutions", // ID de la organización contraparte
     fechaInicio: new Date('2024-01-15'),
     fechaTermino: new Date('2024-12-15'),
     monto: 85000000,
@@ -29,6 +30,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Licencias de Software ERP",
     descripcion: "Adquisición de licencias anuales para el sistema ERP desarrollado",
     contraparte: "TechSolutions SpA",
+    contraparteId: "org-tech-solutions", // ID de la organización contraparte
     fechaInicio: new Date('2025-01-01'),
     fechaTermino: new Date('2025-12-31'),
     monto: 12000000,
@@ -53,6 +55,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Arriendo de Oficina Central",
     descripcion: "Contrato de arriendo de nuevas oficinas centrales para expansión de operaciones",
     contraparte: "Inmobiliaria Corporativa Ltda",
+    contraparteId: "org-inmobiliaria-corportiva", // ID de la organización contraparte
     fechaInicio: new Date('2024-03-01'),
     fechaTermino: new Date('2027-02-28'),
     monto: 180000000,
@@ -75,6 +78,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Servicio de Remodelación",
     descripcion: "Servicios de arquitectura y remodelación para adaptación de nuevas oficinas",
     contraparte: "Arquitectos & Diseño SA",
+    contraparteId: "org-arquitectos-diseno", // ID de la organización contraparte
     fechaInicio: new Date('2024-04-15'),
     fechaTermino: new Date('2024-08-30'),
     monto: 45000000,
@@ -99,6 +103,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Campaña Publicitaria Digital",
     descripcion: "Desarrollo y ejecución de campaña publicitaria integral en medios digitales",
     contraparte: "Digital Marketing Pro",
+    contraparteId: "org-digital-marketing-pro", // ID de la organización contraparte
     fechaInicio: new Date('2024-05-01'),
     fechaTermino: new Date('2024-11-30'),
     monto: 28000000,
@@ -121,6 +126,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Plataforma de Analytics",
     descripcion: "Suscripción anual a plataforma de análisis y métricas de marketing digital",
     contraparte: "Analytics Solutions Inc",
+    contraparteId: "org-analytics-solutions", // ID de la organización contraparte
     fechaInicio: new Date('2024-06-01'),
     fechaTermino: new Date('2025-05-31'),
     monto: 8500000,
@@ -145,6 +151,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Consultoría en Gestión del Talento",
     descripcion: "Servicios de consultoría para implementación de sistema de gestión y evaluación del talento humano",
     contraparte: "HR Consulting Group",
+    contraparteId: "org-hr-consulting-group", // ID de la organización contraparte
     fechaInicio: new Date('2024-08-01'),
     fechaTermino: new Date('2025-01-31'),
     monto: 15000000,
@@ -167,6 +174,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Plataforma de Capacitación Online",
     descripcion: "Suscripción a plataforma de capacitación y desarrollo profesional para empleados",
     contraparte: "LearnTech Solutions",
+    contraparteId: "org-learntech-solutions", // ID de la organización contraparte
     fechaInicio: new Date('2024-09-01'),
     fechaTermino: new Date('2025-08-31'),
     monto: 6800000,
@@ -191,6 +199,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Contrato de Exportación - Europa",
     descripcion: "Acuerdo marco para exportación de productos a mercados europeos",
     contraparte: "EuroTrade Distribution GmbH",
+    contraparteId: "org-eurotrade-distribution", // ID de la organización contraparte
     fechaInicio: new Date('2024-10-01'),
     fechaTermino: new Date('2025-09-30'),
     monto: 150000000,
@@ -213,6 +222,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Servicios de Logística Internacional",
     descripcion: "Contrato de servicios logísticos para distribución internacional de productos",
     contraparte: "Global Logistics Partners",
+    contraparteId: "org-global-logistics-partners", // ID de la organización contraparte
     fechaInicio: new Date('2024-11-01'),
     fechaTermino: new Date('2025-10-31'),
     monto: 35000000,
@@ -237,6 +247,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Mantenimiento de Equipos de Oficina",
     descripcion: "Contrato de mantenimiento preventivo y correctivo de equipos de oficina y tecnología",
     contraparte: "TechService Maintenance",
+    contraparteId: "org-techservice-maintenance", // ID de la organización contraparte
     fechaInicio: new Date('2024-07-01'),
     fechaTermino: new Date('2025-06-30'),
     monto: 18000000,
@@ -259,6 +270,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Soporte Técnico Especializado",
     descripcion: "Servicios de soporte técnico especializado 24/7 para sistemas críticos",
     contraparte: "Support Pro Services",
+    contraparteId: "org-support-pro-services", // ID de la organización contraparte
     fechaInicio: new Date('2024-01-01'),
     fechaTermino: new Date('2024-12-31'),
     monto: 24000000,
@@ -281,6 +293,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Seguro de Equipos Tecnológicos",
     descripcion: "Póliza de seguro integral para protección de equipos tecnológicos y sistemas",
     contraparte: "Seguros Corporativos SA",
+    contraparteId: "org-seguros-corporativos", // ID de la organización contraparte
     fechaInicio: new Date('2024-04-01'),
     fechaTermino: new Date('2025-03-31'),
     monto: 8200000,
@@ -305,6 +318,7 @@ export const contratosEjemplo: Omit<Contrato, 'id' | 'fechaCreacion' | 'version'
     titulo: "Auditoría Externa Anual",
     descripcion: "Servicios de auditoría externa integral y revisión de estados financieros",
     contraparte: "Auditoría y Consultoría Profesional",
+    contraparteId: "org-auditoria-consultoria-profesional", // ID de la organización contraparte
     fechaInicio: new Date('2024-12-01'),
     fechaTermino: new Date('2025-03-31'),
     monto: 22000000,
@@ -356,10 +370,18 @@ export const proyectosEjemplo = [
     id: 'proj-006',
     nombre: 'Mantenimiento y Soporte',
     organizacionId: 'org-001'
-  },
-  {
+  },  {
     id: 'proj-007',
     nombre: 'Auditoría y Compliance',
     organizacionId: 'org-001'
   }
 ]
+
+// Función auxiliar para generar fechas de creación realistas
+export const generarFechaCreacion = (fechaInicio: Date): Date => {
+  // Generar fecha de creación entre 1-30 días antes de la fecha de inicio
+  const diasAntes = Math.floor(Math.random() * 30) + 1
+  const fechaCreacion = new Date(fechaInicio)
+  fechaCreacion.setDate(fechaCreacion.getDate() - diasAntes)
+  return fechaCreacion
+}

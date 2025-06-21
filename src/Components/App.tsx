@@ -10,6 +10,7 @@ import ForgotPassword from './ForgotPassword'
 import UpdateProfile from './UpdateProfile'
 import Projects from './Projects'
 import ContractModule from './contracts/ContractModule'
+import ContraparteModule from './contrapartes/ContraparteModule'
 import DashboardLayout from './layout/DashboardLayout'
 import ProjectList from './projects/ProjectList'
 import ProjectDetail from './projects/ProjectDetail'
@@ -50,6 +51,7 @@ function App() {
             <Route element={<DashboardLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/contratos" element={<ContractModule />} />
+              <Route path="/contrapartes" element={<ContraparteModule />} />
               <Route path="/update-profile" element={<UpdateProfile />} />
               <Route path="/projects" element={<ProjectList />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />

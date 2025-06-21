@@ -65,9 +65,10 @@ const ContractList: React.FC = () => {
       loadContracts()
     }
   }, [userRole, userOrgId])
-
   const loadUserData = async () => {
-    if (!currentUser) return    try {
+    if (!currentUser) return
+    
+    try {
       const { doc, getDoc, getFirestore } = await import('firebase/firestore')
       const db = getFirestore()
       const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
@@ -129,10 +130,8 @@ const ContractList: React.FC = () => {
       const contractsData: Contract[] = []
 
       querySnapshot.forEach((doc) => {
-        const contract = { id: doc.id, ...doc.data() } as Contract
-        
-        // Additional filtering based on role permissions
-        if (canAccessContract(userRole, userOrgId, contract.organizacionId, currentUser?.departamento, contract.departamento)) {
+        const contract = { id: doc.id, ...doc.data() } as Contract        // Additional filtering based on role permissions
+        if (canAccessContract(userRole, userOrgId, contract.organizacionId, contract.proyecto, [], contract.id)) {
           contractsData.push(contract)
         }
       })

@@ -113,11 +113,11 @@ export const usePermissions = () => {
       getUserPermissions: () => user.permisos || [],
     }
   }, [user, currentUser])
-
   return {
     ...permissions,
     userRole: user?.rol,
-    userOrganizationId: user?.organizacionId
+    userOrganizationId: user?.organizacionId,
+    isLoggedIn: !!user && !!currentUser
   }
 }
 

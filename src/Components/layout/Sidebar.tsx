@@ -9,7 +9,8 @@ import {
   ClockIcon,
   BriefcaseIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -39,6 +40,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       name: 'Contratos',
       href: '/contratos',
       icon: DocumentTextIcon,
+    },
+    {
+      name: 'Contrapartes',
+      href: '/contrapartes',
+      icon: BuildingOfficeIcon,
     },
     {
       name: 'Plantillas',

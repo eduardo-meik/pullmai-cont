@@ -71,7 +71,8 @@ export interface Contrato {
   id: string
   titulo: string
   descripcion: string
-  contraparte: string // Nombre de la contraparte
+  contraparte: string // Nombre de la organización contraparte (for display)
+  contraparteId?: string // ID de la organización contraparte (referencia a organizaciones collection)
   fechaInicio: Date // Fecha de Inicio
   fechaTermino: Date // Fecha de Termino (anteriormente fechaVencimiento)
   monto: number // Monto del contrato
@@ -224,6 +225,7 @@ export interface FormularioContrato {
   titulo: string
   descripcion: string
   contraparte: string
+  contraparteId?: string // ID de la organización contraparte
   fechaInicio: string
   fechaTermino: string
   monto: number
@@ -324,4 +326,24 @@ export interface EstadisticasProyecto {
     valor: number
     cantidad: number
   }>
+}
+
+// Tipos para contrapartes (organizaciones con las que tenemos contratos)
+export interface ContraparteRelacion {
+  organizacionId: string // ID de la organización contraparte
+  organizacion: Organizacion // Datos completos de la organización
+  estadisticas: ContraparteEstadisticas // Estadísticas de la relación contractual
+}
+
+export interface ContraparteEstadisticas {
+  totalContratos: number
+  montoTotal: number
+  montoPromedio: number
+  contratosActivos: number
+  contratosVencidos: number
+  contratosProximosVencer: number
+  ultimoContrato?: Date
+  proximoVencimiento?: Date
+  categoriasPrincipales: string[] // Categorías de contratos más comunes
+  departamentosInvolucrados: string[] // Departamentos que han contratado con esta organización
 }

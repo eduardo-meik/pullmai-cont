@@ -12,7 +12,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, helperText, showPasswordToggle, icon, className = '', ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false)
-    const [isFocused, setIsFocused] = useState(false)
+    // Removed isFocused state to eliminate spotlight effect
 
     const inputType = showPasswordToggle 
       ? (showPassword ? 'text' : 'password')
@@ -34,8 +34,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                 {icon}
               </div>
             </div>
-          )}
-            <input
+          )}            <input
             ref={ref}
             className={`
               block w-full px-3 py-2.5 
@@ -44,21 +43,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               border border-neutral-300 rounded-lg
               text-neutral-900 placeholder-neutral-500
               bg-white
-              transition-colors duration-200
-              focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+              transition-colors duration-200              focus:border-primary-500
               hover:border-neutral-400
-              ${error ? 'border-error-500 focus:ring-error-500 focus:border-error-500' : ''}
-              ${isFocused ? 'animate-scale-in' : ''}
+              ${error ? 'border-error-500 focus:border-error-500' : ''}
               ${className}
             `}
             onFocus={(e) => {
-              setIsFocused(true)
               props.onFocus?.(e)
             }}
             onBlur={(e) => {
-              setIsFocused(false)
               props.onBlur?.(e)
-            }            }
+            }}
             aria-invalid={error ? 'true' : 'false'}
             aria-describedby={
               error ? `${props.id}-error` : 
