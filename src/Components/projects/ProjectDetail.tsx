@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useProject, useProjects } from '../../hooks/useProjects'
-import { useDeleteContract } from '../../hooks/useContracts'
+import { useDeleteContract, useUnlinkContractFromProject } from '../../hooks/useContracts'
 import { EstadoProyecto, PrioridadProyecto, EstadoContrato } from '../../types'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import ContractCard from '../contracts/ContractCard'
@@ -10,9 +10,9 @@ import { useToast } from '../../contexts/ToastContext'
 const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { proyecto, contratos, estadisticas, loading, error } = useProject(id!)
+  const { proyecto, contratos, estadisticas, loading, error, refetch } = useProject(id!)
   const { eliminarProyecto } = useProjects()
-  const deleteContractMutation = useDeleteContract()
+  const unlinkContractMutation = useUnlinkContractFromProject()
   const { showToast } = useToast()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -36,10 +36,10 @@ const ProjectDetail: React.FC = () => {
 
   const handleDeleteContract = async (contractId: string) => {
     try {
-      await deleteContractMutation.mutateAsync(contractId)
-      // Toast will be shown by the hook automatically
+      await unlinkContractMutation.mutateAsync(contractId)
+      await refetch() // Refresh project/contracts after unlink
     } catch (error) {
-      console.error('Error eliminando contrato:', error)
+      console.error('Error desvinculando contrato del proyecto:', error)
       // Error toast will be shown by the hook automatically
     }
   }

@@ -146,3 +146,24 @@ export const useSearchContracts = () => {
     }
   })
 }
+
+export const useUnlinkContractFromProject = () => {
+  const { usuario } = useAuthStore()
+  const { showTypedToast } = useToast()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!usuario) throw new Error('Usuario no autenticado')
+      await contractService.desvincularContratoDeProyecto(id)
+      return id
+    },
+    onSuccess: (id) => {
+      queryClient.invalidateQueries({ queryKey: ['contratos'] })
+      showTypedToast('success', 'Contrato desvinculado del proyecto')
+    },
+    onError: (error: Error) => {
+      showTypedToast('error', error.message)
+    }
+  })
+}

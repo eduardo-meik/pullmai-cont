@@ -337,6 +337,20 @@ export class ContractService {
       console.error('Error al registrar acceso:', error)
     }
   }
+
+  async desvincularContratoDeProyecto(id: string): Promise<void> {
+    try {
+      const contratoRef = doc(db, this.collection, id)
+      await updateDoc(contratoRef, {
+        proyectoId: '',
+        proyecto: '',
+        fechaUltimaModificacion: new Date(),
+      })
+    } catch (error) {
+      console.error('Error al desvincular contrato del proyecto:', error)
+      throw new Error('Error al desvincular el contrato del proyecto')
+    }
+  }
 }
 
 export const contractService = ContractService.getInstance()

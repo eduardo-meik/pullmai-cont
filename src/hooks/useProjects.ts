@@ -131,7 +131,7 @@ export const useProject = (id: string) => {
     estadisticas,
     loading,
     error,
-    recargar: cargarProyecto
+    refetch: cargarProyecto, // Expose for manual refresh
   }
 }
 
