@@ -2,9 +2,10 @@ import React, { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useProject, useProjects } from '../../hooks/useProjects'
 import { useDeleteContract, useUnlinkContractFromProject } from '../../hooks/useContracts'
-import { EstadoProyecto, PrioridadProyecto, EstadoContrato, CategoriaContrato, Periodicidad, TipoEconomico } from '../../types'
+import { EstadoProyecto, PrioridadProyecto, EstadoContrato, CategoriaContrato, Periodicidad, TipoEconomico, Contrato } from '../../types'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import ContractCard from '../contracts/ContractCard'
+import ContractDetail from '../contracts/ContractDetail'
 import { useToast } from '../../contexts/ToastContext'
 import ContractSelectModal from '../contracts/ContractSelectModal'
 import ContractForm from '../contracts/ContractForm'
@@ -27,6 +28,9 @@ const ProjectDetail: React.FC = () => {
   const [showEditForm, setShowEditForm] = useState(false)
   const [showContractForm, setShowContractForm] = useState(false)
   const [showContractSelect, setShowContractSelect] = useState(false)
+  const [showContractDetail, setShowContractDetail] = useState(false)
+  const [showContractEdit, setShowContractEdit] = useState(false)
+  const [selectedContract, setSelectedContract] = useState<Contrato | null>(null)
   
   const linkContractMutation = useMutation({
     mutationFn: async (contrato: any) => {
@@ -95,10 +99,25 @@ const ProjectDetail: React.FC = () => {
     deleteProjectMutation.mutate()
     setShowDeleteConfirm(false)
   }
-
   const handleCreateContract = () => {
     setShowContractForm(false)
     refetch() // Refresh the project data to show the new contract
+  }
+
+  const handleViewContract = (contrato: Contrato) => {
+    setSelectedContract(contrato)
+    setShowContractDetail(true)
+  }
+
+  const handleEditContract = (contrato: Contrato) => {
+    setSelectedContract(contrato)
+    setShowContractEdit(true)
+  }
+
+  const handleContractEditSuccess = () => {
+    setShowContractEdit(false)
+    setSelectedContract(null)
+    refetch() // Refresh the project data to show the updated contract
   }
 
   const handleDeleteContract = async (contractId: string) => {
@@ -354,6 +373,9 @@ const ProjectDetail: React.FC = () => {
                   key={contrato.id}
                   contrato={contrato}
                   onEliminar={() => handleDeleteContract(contrato.id)}
+                  onVer={() => handleViewContract(contrato)}
+                  onEditar={() => handleEditContract(contrato)}
+                  onClick={() => handleViewContract(contrato)}
                 />
               ))}
             </div>
@@ -448,6 +470,45 @@ const ProjectDetail: React.FC = () => {
             estado: 'BORRADOR' as EstadoContrato,
             departamento: proyecto.departamento || '',
             etiquetas: []
+          }}
+        />
+      )}      {/* Modal para ver detalles del contrato */}
+      {showContractDetail && selectedContract && (
+        <ContractDetail
+          isOpen={showContractDetail}
+          onClose={() => {
+            setShowContractDetail(false)
+            setSelectedContract(null)
+          }}
+          contract={selectedContract}
+        />
+      )}
+
+      {/* Modal para editar contrato */}
+      {showContractEdit && selectedContract && (
+        <ContractForm
+          isOpen={showContractEdit}
+          onClose={() => {
+            setShowContractEdit(false)
+            setSelectedContract(null)
+          }}
+          onSuccess={handleContractEditSuccess}
+          contractToEdit={{
+            titulo: selectedContract.titulo,
+            descripcion: selectedContract.descripcion,
+            contraparte: selectedContract.contraparte,
+            fechaInicio: selectedContract.fechaInicio.toISOString().split('T')[0],
+            fechaTermino: selectedContract.fechaTermino.toISOString().split('T')[0],
+            monto: selectedContract.monto,
+            moneda: selectedContract.moneda,
+            categoria: selectedContract.categoria,
+            periodicidad: selectedContract.periodicidad,
+            tipo: selectedContract.tipo,
+            proyecto: selectedContract.proyecto,
+            proyectoId: selectedContract.proyectoId,
+            estado: selectedContract.estado,
+            departamento: selectedContract.departamento,
+            etiquetas: selectedContract.etiquetas
           }}
         />
       )}

@@ -17,9 +17,18 @@ import Button from '../ui/Button'
 interface ContractCardProps {
   contrato: Contrato
   onEliminar: () => void
+  onVer?: () => void
+  onEditar?: () => void
+  onClick?: () => void
 }
 
-const ContractCard: React.FC<ContractCardProps> = ({ contrato, onEliminar }) => {
+const ContractCard: React.FC<ContractCardProps> = ({ 
+  contrato, 
+  onEliminar, 
+  onVer, 
+  onEditar, 
+  onClick 
+}) => {
   const getEstadoColor = (estado: EstadoContrato) => {
     const colores = {
       borrador: 'bg-gray-100 text-gray-800 border-gray-200',
@@ -89,11 +98,13 @@ const ContractCard: React.FC<ContractCardProps> = ({ contrato, onEliminar }) => 
     )
     return diasRestantes <= 30 && diasRestantes > 0
   }
-
   return (
     <motion.div
       whileHover={{ y: -4 }}
-      className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200"
+      className={`bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 ${
+        onClick ? 'cursor-pointer' : ''
+      }`}
+      onClick={onClick}
     >
       <div className="p-6">
         {/* Header */}
@@ -192,16 +203,17 @@ const ContractCard: React.FC<ContractCardProps> = ({ contrato, onEliminar }) => 
               </span>
             )}
           </div>
-        )}
-
-        {/* Acciones */}
+        )}        {/* Acciones */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <div className="flex space-x-2">
             <Button
               variant="ghost"
               size="sm"
               icon={<EyeIcon className="h-4 w-4" />}
-              onClick={() => {/* Ver contrato */}}
+              onClick={(e) => {
+                e.stopPropagation()
+                onVer?.()
+              }}
             >
               Ver
             </Button>
@@ -209,7 +221,10 @@ const ContractCard: React.FC<ContractCardProps> = ({ contrato, onEliminar }) => 
               variant="ghost"
               size="sm"
               icon={<PencilIcon className="h-4 w-4" />}
-              onClick={() => {/* Editar contrato */}}
+              onClick={(e) => {
+                e.stopPropagation()
+                onEditar?.()
+              }}
             >
               Editar
             </Button>
@@ -218,7 +233,10 @@ const ContractCard: React.FC<ContractCardProps> = ({ contrato, onEliminar }) => 
             variant="ghost"
             size="sm"
             icon={<TrashIcon className="h-4 w-4" />}
-            onClick={onEliminar}
+            onClick={(e) => {
+              e.stopPropagation()
+              onEliminar()
+            }}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
             Eliminar
