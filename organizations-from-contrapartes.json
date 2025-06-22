@@ -1,0 +1,282 @@
+[
+  {
+    "id": "org-analytics-solutions-inc",
+    "nombre": "Analytics Solutions Inc",
+    "descripcion": "Organización contraparte - Tecnología",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.268Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-arquitectos-diseo-sa",
+    "nombre": "Arquitectos & Diseño SA",
+    "descripcion": "Organización contraparte - Inmobiliario",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-auditora-y-consultora-profesional",
+    "nombre": "Auditoría y Consultoría Profesional",
+    "descripcion": "Organización contraparte - Auditoría",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-digital-marketing-pro",
+    "nombre": "Digital Marketing Pro",
+    "descripcion": "Organización contraparte - Tecnología",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-eurotrade-distribution-gmbh",
+    "nombre": "EuroTrade Distribution GmbH",
+    "descripcion": "Organización contraparte - Logística",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-global-logistics-partners",
+    "nombre": "Global Logistics Partners",
+    "descripcion": "Organización contraparte - Logística",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-hr-consulting-group",
+    "nombre": "HR Consulting Group",
+    "descripcion": "Organización contraparte - Consultoría",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-inmobiliaria-corporativa-ltda",
+    "nombre": "Inmobiliaria Corporativa Ltda",
+    "descripcion": "Organización contraparte - Inmobiliario",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-learntech-solutions",
+    "nombre": "LearnTech Solutions",
+    "descripcion": "Organización contraparte - Tecnología",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-papelera-corporativa-ltda",
+    "nombre": "Papelería Corporativa Ltda",
+    "descripcion": "Organización contraparte - Suministros",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-seguros-corporativos-sa",
+    "nombre": "Seguros Corporativos SA",
+    "descripcion": "Organización contraparte - Seguros",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-support-pro-services",
+    "nombre": "Support Pro Services",
+    "descripcion": "Organización contraparte - Servicios",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-techservice-maintenance",
+    "nombre": "TechService Maintenance",
+    "descripcion": "Organización contraparte - Tecnología",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  },
+  {
+    "id": "org-techsolutions-spa",
+    "nombre": "TechSolutions SpA",
+    "descripcion": "Organización contraparte - Tecnología",
+    "logo": null,
+    "activa": true,
+    "fechaCreacion": "2025-06-22T19:19:13.269Z",
+    "configuracion": {
+      "tiposContratoPermitidos": [
+        "servicio",
+        "compra",
+        "venta",
+        "otro"
+      ],
+      "flujoAprobacion": false,
+      "notificacionesEmail": false,
+      "retencionDocumentos": 365,
+      "plantillasPersonalizadas": false
+    }
+  }
+]

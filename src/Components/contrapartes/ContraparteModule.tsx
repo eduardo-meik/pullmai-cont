@@ -5,47 +5,97 @@ import {
   MagnifyingGlassIcon,
   PlusIcon,
   Squares2X2Icon,
-  ListBulletIcon
+  ListBulletIcon,
+  ArrowDownTrayIcon,
+  Cog6ToothIcon
 } from '@heroicons/react/24/outline'
 import ContraparteTable from './ContraparteTable'
-// import ContraparteCards from './ContraparteCards'
-// import ContraparteForm from './ContraparteForm.temp'
-// import ContraparteDetail from './ContraparteDetail.temp'
+import OrganizacionModal from './OrganizacionModal'
+import ContraparteDetailedView from './ContraparteDetailedView'
+import ContractImportModal from './ContractImportModal'
+import UserAccessManagement from './UserAccessManagement'
 import { useContrapartesOrganizacion } from '../../hooks/useContrapartesOrganizacion'
-import { ContraparteRelacion } from '../../types'
+import { useOrganizaciones } from '../../hooks/useOrganizaciones'
+import { useAuth } from '../../contexts/AuthContext'
+import { ContraparteRelacion, Organizacion } from '../../types'
 
 type ViewMode = 'table' | 'cards'
 
 const ContraparteModule: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [searchTerm, setSearchTerm] = useState('')
-  // Removed form and detail states - functionality simplified for new architecture
+  const [showOrganizacionModal, setShowOrganizacionModal] = useState(false)
+  const [showDetailedView, setShowDetailedView] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [showUserManagement, setShowUserManagement] = useState(false)
+  const [selectedOrganizacion, setSelectedOrganizacion] = useState<Organizacion | null>(null)
+  const [editingOrganizacion, setEditingOrganizacion] = useState<Organizacion | null>(null)
 
   const { data: contrapartes = [], isLoading, error, refetch } = useContrapartesOrganizacion()
-
+  const { 
+    crearOrganizacion, 
+    actualizarOrganizacion, 
+    eliminarOrganizacion,
+    isCreating,
+    isUpdating,
+    isDeleting 
+  } = useOrganizaciones()
+  const { currentUser } = useAuth()
   // Filtrar contrapartes basado en el término de búsqueda
   const filteredContrapartes = contrapartes.filter((contraparte: ContraparteRelacion) =>
     contraparte.organizacion.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     contraparte.organizacion.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())
   )
+  
   const handleCreateContraparte = () => {
-    // Contrapartes are created automatically when creating contracts
-    // This function is disabled for now
+    setEditingOrganizacion(null)
+    setShowOrganizacionModal(true)
   }
+
   const handleEditContraparte = (contraparte: ContraparteRelacion) => {
-    // Navigate to contracts view filtered by this organization
-    console.log('Ver contratos de:', contraparte.organizacion.nombre)
-    // TODO: Navigate to contracts module with filter by organizationId
+    setEditingOrganizacion(contraparte.organizacion)
+    setShowOrganizacionModal(true)
   }
-
   const handleViewContraparte = (contraparte: ContraparteRelacion) => {
-    // Show organization details and contract history
-    console.log('Ver detalles de:', contraparte.organizacion.nombre)
-    // TODO: Show detailed view with contract statistics and history
+    setSelectedOrganizacion(contraparte.organizacion)
+    setShowDetailedView(true)
   }
 
-  // Removed form and detail functionality since contrapartes are now relationships
-  // The UI now focuses on displaying existing relationships
+  const handleRequestImport = (organizacionId: string) => {
+    const organizacion = contrapartes.find(c => c.organizacionId === organizacionId)?.organizacion
+    if (organizacion) {
+      setSelectedOrganizacion(organizacion)
+      setShowImportModal(true)
+    }
+  }
+
+  const handleManageUsers = (contraparte: ContraparteRelacion) => {
+    setSelectedOrganizacion(contraparte.organizacion)
+    setShowUserManagement(true)
+  }
+
+  const handleCreateOrganizacion = async (organizacionData: Omit<Organizacion, 'id' | 'fechaCreacion'>) => {
+    await crearOrganizacion(organizacionData)
+    refetch()
+  }
+  const handleUpdateOrganizacion = async (organizacionData: Omit<Organizacion, 'id' | 'fechaCreacion'>) => {
+    if (!editingOrganizacion?.id) return
+    await actualizarOrganizacion(editingOrganizacion.id, organizacionData)
+    refetch()
+  }
+
+  const handleDeleteOrganizacion = async (organizacion: Organizacion) => {
+    await eliminarOrganizacion(organizacion.id)
+    refetch()
+  }
+  const handleCloseModals = () => {
+    setShowOrganizacionModal(false)
+    setShowDetailedView(false)
+    setShowImportModal(false)
+    setShowUserManagement(false)
+    setSelectedOrganizacion(null)
+    setEditingOrganizacion(null)
+  }
 
   if (error) {
     return (
@@ -85,11 +135,10 @@ const ContraparteModule: React.FC = () => {
             </div>            <button
               onClick={handleCreateContraparte}
               className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2"
-              disabled
-              title="Las contrapartes se crean automáticamente al crear contratos"
+              disabled={isCreating}
             >
               <PlusIcon className="h-5 w-5" />
-              <span>Nueva Organización</span>
+              <span>{isCreating ? 'Creando...' : 'Nueva Organización'}</span>
             </button>
           </div>          {/* Stats */}
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -233,10 +282,48 @@ const ContraparteModule: React.FC = () => {
                   Cards view temporarily disabled. Please use table view.
                 </div>
               )}
-            </>
-          )}
+            </>          )}
         </div>
-      </div>
+      </div>      {/* Modals */}
+      <OrganizacionModal
+        isOpen={showOrganizacionModal}
+        onClose={handleCloseModals}
+        organizacion={editingOrganizacion}
+        onSubmit={editingOrganizacion ? handleUpdateOrganizacion : handleCreateOrganizacion}
+        isLoading={isCreating || isUpdating}
+      />
+
+      {selectedOrganizacion && (
+        <>
+          <ContraparteDetailedView
+            isOpen={showDetailedView}
+            onClose={handleCloseModals}
+            organizacion={selectedOrganizacion}
+            userId={currentUser?.uid || ''}
+            onEdit={(org: Organizacion) => {
+              setEditingOrganizacion(org)
+              setShowDetailedView(false)
+              setShowOrganizacionModal(true)
+            }}
+            onRequestImport={handleRequestImport}
+          />
+
+          <ContractImportModal
+            isOpen={showImportModal}
+            onClose={handleCloseModals}
+            organizacionId={selectedOrganizacion.id}
+            currentUserId={currentUser?.uid || ''}
+          />
+
+          <UserAccessManagement
+            isOpen={showUserManagement}
+            onClose={handleCloseModals}
+            organizacionId={selectedOrganizacion.id}
+            organizacionName={selectedOrganizacion.nombre}
+            currentUserId={currentUser?.uid || ''}
+          />
+        </>
+      )}
     </div>
   )
 }

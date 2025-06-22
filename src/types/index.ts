@@ -72,7 +72,8 @@ export interface Contrato {
   titulo: string
   descripcion: string
   contraparte: string // Nombre de la organización contraparte (for display)
-  contraparteId?: string // ID de la organización contraparte (referencia a organizaciones collection)
+  contraparteId?: string // ID de la organización contraparte (referencia a organizaciones collection) - LEGACY
+  contraparteOrganizacionId?: string // ID de la organización contraparte (nueva estructura)
   fechaInicio: Date // Fecha de Inicio
   fechaTermino: Date // Fecha de Termino (anteriormente fechaVencimiento)
   monto: number // Monto del contrato

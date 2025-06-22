@@ -1,0 +1,162 @@
+// Enhanced Firestore Security Rules for Contraparte Access Management
+// This maintains the current efficient structure while adding granular partner organization access
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions (existing)
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol;
+    }
+    
+    function getUserOrganization() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.organizacionId;
+    }
+    
+    function isSuperAdmin() {
+      return isSignedIn() && getUserRole() == 'super_admin';
+    }
+    
+    function isOrgAdmin() {
+      return isSignedIn() && getUserRole() == 'org_admin';
+    }
+    
+    function isSameOrganization(orgId) {
+      return isSignedIn() && getUserOrganization() == orgId;
+    }
+    
+    // NEW: Helper function to check contraparte access
+    function hasContraparteAccess(orgId) {
+      return isSignedIn() && (
+        orgId in get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.contraparteAccess
+      );
+    }
+    
+    // NEW: Helper function to check if user has contraparte permission for an organization
+    function hasActiveContrapartePermission(orgId) {
+      return exists(/databases/$(database)/documents/contrapartePermissions/$(request.auth.uid + '-' + orgId)) &&
+             get(/databases/$(database)/documents/contrapartePermissions/$(request.auth.uid + '-' + orgId)).data.activa == true;
+    }
+
+    // USUARIOS - Enhanced with contraparte access
+    match /usuarios/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId || 
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+      );
+      allow write: if isSignedIn() && (
+        request.auth.uid == userId || 
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+      );
+    }
+
+    // ORGANIZACIONES - Enhanced with contraparte viewer access
+    match /organizaciones/{orgId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || 
+        isSameOrganization(orgId) ||
+        hasContraparteAccess(orgId) // NEW: Users can view partner organizations
+      );
+      allow write: if isSuperAdmin() || (
+        isOrgAdmin() && isSameOrganization(orgId)
+      );
+    }
+    
+    // NEW: Contraparte Permissions Collection
+    match /contrapartePermissions/{permissionId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && (
+          isSameOrganization(resource.data.organizacionId) || // Admin of the partner org
+          resource.data.grantedBy == request.auth.uid // User who granted the permission
+        )) ||
+        resource.data.userId == request.auth.uid // The user with the permission
+      );
+      
+      allow create: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(request.resource.data.organizacionId))
+      );
+      
+      allow update, delete: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId)) ||
+        resource.data.grantedBy == request.auth.uid
+      );
+    }
+
+    // PROYECTOS - No changes needed, existing logic is good
+    match /proyectos/{projectId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || 
+        isSameOrganization(resource.data.organizacionId)
+      );
+      allow create: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(request.resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(request.resource.data.organizacionId))
+      );
+      allow update: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(resource.data.organizacionId))
+      );
+      allow delete: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+      );
+    }
+
+    // CONTRATOS - Enhanced with contraparte viewer access for relevant contracts
+    match /contratos/{contractId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || 
+        isSameOrganization(resource.data.organizacionId) ||
+        // NEW: Contraparte viewers can see contracts where their org is the contraparte
+        (hasContraparteAccess(resource.data.organizacionId) && 
+         getUserOrganization() == resource.data.contraparteId)
+      );
+      
+      allow create: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(request.resource.data.organizacionId)) ||
+        (getUserRole() in ['manager', 'user'] && isSameOrganization(request.resource.data.organizacionId))
+      );
+      
+      allow update: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'user' && isSameOrganization(resource.data.organizacionId) && 
+         request.auth.uid == resource.data.responsableId)
+      );
+      
+      allow delete: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+      );
+    }
+
+    // Storage rules for contract PDFs - Enhanced with contraparte access
+    match /storage/{bucket}/contratos/{organizacionId}/{fileName} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        isSameOrganization(organizacionId) ||
+        hasContraparteAccess(organizacionId) // NEW: Contraparte viewers can access relevant PDFs
+      );
+      
+      allow write: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(organizacionId)) ||
+        (getUserRole() in ['manager', 'user'] && isSameOrganization(organizacionId))
+      );
+    }
+  }
+}
