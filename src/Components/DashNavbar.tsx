@@ -5,10 +5,12 @@ import { FiLogOut, FiEdit2 } from 'react-icons/fi'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { useToast, EToastTypes } from '../contexts/ToastContext'
+import { useCurrentOrganization } from '../hooks/useCurrentOrganization'
 
 export default function DashNavbar() {
   const { logout } = useAuth()
   const { showError } = useToast()
+  const { organizacion, loading: orgLoading } = useCurrentOrganization()
 
   const navigate = useNavigate()
   const menuOptions: IMenuOption[] = [
@@ -53,18 +55,43 @@ export default function DashNavbar() {
                     className="block h-8 w-auto lg:hidden"
                     src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0xMS41IC0xMC4yMzE3NCAyMyAyMC40NjM0OCI+CiAgPHRpdGxlPlJlYWN0IExvZ288L3RpdGxlPgogIDxjaXJjbGUgY3g9IjAiIGN5PSIwIiByPSIyLjA1IiBmaWxsPSIjNjFkYWZiIi8+CiAgPGcgc3Ryb2tlPSIjNjFkYWZiIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiPgogICAgPGVsbGlwc2Ugcng9IjExIiByeT0iNC4yIi8+CiAgICA8ZWxsaXBzZSByeD0iMTEiIHJ5PSI0LjIiIHRyYW5zZm9ybT0icm90YXRlKDYwKSIvPgogICAgPGVsbGlwc2Ugcng9IjExIiByeT0iNC4yIiB0cmFuc2Zvcm09InJvdGF0ZSgxMjApIi8+CiAgPC9nPgo8L3N2Zz4K"
                     alt="ContractHub"
-                  />
-                  <img
+                  />                  <img
                     className="hidden h-8 w-auto lg:block"
                     src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0xMS41IC0xMC4yMzE3NCAyMyAyMC40NjM0OCI+CiAgPHRpdGxlPlJlYWN0IExvZ288L3RpdGxlPgogIDxjaXJjbGUgY3g9IjAiIGN5PSIwIiByPSIyLjA1IiBmaWxsPSIjNjFkYWZiIi8+CiAgPGcgc3Ryb2tlPSIjNjFkYWZiIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiPgogICAgPGVsbGlwc2Ugcng9IjExIiByeT0iNC4yIi8+CiAgICA8ZWxsaXBzZSByeD0iMTEiIHJ5PSI0LjIiIHRyYW5zZm9ybT0icm90YXRlKDYwKSIvPgogICAgPGVsbGlwc2Ugcng9IjExIiByeT0iNC4yIiB0cmFuc2Zvcm09InJvdGF0ZSgxMjApIi8+CiAgPC9nPgo8L3N2Zz4K"
                     alt="ContractHub"
                   />
-                </div>
-                <div className="hidden sm:ml-6 sm:block">
+                  {/* Mobile Organization Display */}
+                  <div className="ml-3 sm:hidden">
+                    {orgLoading ? (
+                      <div className="animate-pulse">
+                        <div className="h-3 bg-gray-600 rounded w-16"></div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-300 text-xs font-medium">
+                        {organizacion?.nombre || 'Org'}
+                      </span>
+                    )}
+                  </div>
+                </div>                <div className="hidden sm:ml-6 sm:block">
                   <div className="flex items-center space-x-4">
                     <h1 className="text-white text-lg font-semibold">
                       ContractHub
                     </h1>
+                    {/* Organization Display */}
+                    <div className="flex items-center">
+                      <span className="text-gray-300 text-sm">|</span>
+                      <div className="ml-3">
+                        {orgLoading ? (
+                          <div className="animate-pulse">
+                            <div className="h-4 bg-gray-600 rounded w-24"></div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-300 text-sm font-medium">
+                            {organizacion?.nombre || 'Organización'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

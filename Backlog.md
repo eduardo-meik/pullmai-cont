@@ -71,7 +71,7 @@ This document outlines the planned features, enhancements, and technical improve
 | Feature                               | Priority | Difficulty | Description                                                                                             |
 | ------------------------------------- | :------: | :--------: | ------------------------------------------------------------------------------------------------------- |
 | **Branded Color Theme**               |  Medium  |    Low     | Implement a consistent, modern UI style with a brand-specific color theme in Tailwind CSS.              |
-| **Display Organization in Navbar**    |   High   |    Low     | Show the current user's active organization in the main navigation bar for better context.              |
+| **Display Organization in Navbar** ✅ |   High   |    Low     | Show the current user's active organization in the main navigation bar for better context. **COMPLETED** |
 | **In-App Notifications**              |  Medium  |   Medium   | A system to notify users of important events (e.g., contract expiring, task assigned).                  |
 | **Reporting & Analytics Dashboard**   |  Medium  |   Medium   | A dashboard with key metrics (e.g., active contracts, upcoming renewals).                               |
 
