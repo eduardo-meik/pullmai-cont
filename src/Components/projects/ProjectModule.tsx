@@ -66,26 +66,16 @@ const ProjectModule: React.FC = () => {
           <ProjectForm
             proyecto={selectedProject}
             onSubmit={handleFormSubmit}
-            onCancel={handleCancel}
-            isLoading={isLoading}
+            onCancel={handleCancel}            isLoading={isLoading}
           />
         )
       case 'detail':
         return selectedProject ? (
-          <ProjectDetail 
-            projectId={selectedProject.id}
-            onEdit={() => handleEditProject(selectedProject)}
-            onBack={handleCancel}
-          />
-        ) : null
+          <ProjectDetail />        ) : null
       case 'list':
       default:
         return (
-          <ProjectList
-            onCreateProject={handleCreateProject}
-            onEditProject={handleEditProject}
-            onViewProject={handleViewProject}
-          />
+          <ProjectList />
         )
     }
   }

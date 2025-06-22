@@ -18,6 +18,14 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { db, storage } from '../firebase'
 import { Contrato, FormularioContrato, FiltrosContrato, RegistroAuditoria, AccionAuditoria } from '../types'
 
+// Custom error for contract already linked to another project
+export class ContratoYaVinculadoError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ContratoYaVinculadoError'
+  }
+}
+
 export class ContractService {
   private static instance: ContractService
   private readonly collection = 'contratos'
@@ -213,8 +221,14 @@ export class ContractService {
     usuarioId: string
   ): Promise<void> {
     try {
+      // Check if trying to link to a project
+      if (updates.proyectoId && updates.proyectoId !== '') {
+        const current = await this.getContrato(id)
+        if (current && current.proyectoId && current.proyectoId !== updates.proyectoId && current.proyectoId !== '') {
+          throw new ContratoYaVinculadoError('El contrato ya está vinculado a otro proyecto.')
+        }
+      }
       const batch = writeBatch(db)
-      
       const contratoRef = doc(db, this.collection, id)
       const updateData = { ...updates }      // Convertir fechas a Timestamp
       if (updateData.fechaInicio) {
@@ -223,9 +237,7 @@ export class ContractService {
       if (updateData.fechaTermino) {
         updateData.fechaTermino = Timestamp.fromDate(updateData.fechaTermino) as any
       }
-
       batch.update(contratoRef, updateData)
-
       // Crear registro de auditoría
       const auditoriaRef = doc(collection(db, this.auditCollection))
       const auditoriaData: Omit<RegistroAuditoria, 'id'> = {
@@ -236,14 +248,15 @@ export class ContractService {
         fecha: new Date(),
         metadatos: { campos: Object.keys(updates) }
       }
-
       batch.set(auditoriaRef, {
         ...auditoriaData,
         fecha: Timestamp.fromDate(auditoriaData.fecha)
       })
-
       await batch.commit()
     } catch (error) {
+      if (error instanceof ContratoYaVinculadoError) {
+        throw error
+      }
       console.error('Error al actualizar contrato:', error)
       throw new Error('Error al actualizar el contrato')
     }

@@ -2,10 +2,18 @@ import React, { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useProject, useProjects } from '../../hooks/useProjects'
 import { useDeleteContract, useUnlinkContractFromProject } from '../../hooks/useContracts'
-import { EstadoProyecto, PrioridadProyecto, EstadoContrato } from '../../types'
+import { EstadoProyecto, PrioridadProyecto, EstadoContrato, CategoriaContrato, Periodicidad, TipoEconomico } from '../../types'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import ContractCard from '../contracts/ContractCard'
 import { useToast } from '../../contexts/ToastContext'
+import ContractSelectModal from '../contracts/ContractSelectModal'
+import ContractForm from '../contracts/ContractForm'
+import ProjectForm from './ProjectForm'
+import { useMutation } from '@tanstack/react-query'
+import { contractService } from '../../services/contractService'
+import { ProjectService } from '../../services/projectService'
+import { useAuth } from '../../contexts/AuthContext'
+import { ContratoYaVinculadoError } from '../../services/contractService'
 
 const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -14,24 +22,83 @@ const ProjectDetail: React.FC = () => {
   const { eliminarProyecto } = useProjects()
   const unlinkContractMutation = useUnlinkContractFromProject()
   const { showToast } = useToast()
+  const { currentUser } = useAuth()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-
-  const handleDeleteProject = async () => {
-    if (!proyecto) return
-    
-    setIsDeleting(true)
-    try {
-      await eliminarProyecto(proyecto.id)
-      showToast('Proyecto eliminado exitosamente', 'success')
-      navigate('/projects')
-    } catch (error) {
-      console.error('Error eliminando proyecto:', error)
-      showToast('Error al eliminar el proyecto', 'error')
-    } finally {
-      setIsDeleting(false)
-      setShowDeleteConfirm(false)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [showContractForm, setShowContractForm] = useState(false)
+  const [showContractSelect, setShowContractSelect] = useState(false)
+  
+  const linkContractMutation = useMutation({
+    mutationFn: async (contrato: any) => {
+      await contractService.actualizarContrato(contrato.id, {
+        proyectoId: proyecto?.id || '',
+        proyecto: proyecto?.nombre || '',
+      }, currentUser?.uid || '')
+    },
+    onSuccess: async () => {
+      await refetch()
+      setShowContractSelect(false)
+      showToast('Contrato agregado al proyecto', 'success')
+    },
+    onError: (error: any) => {
+      if (error?.name === 'ContratoYaVinculadoError') {
+        showToast('Este contrato ya está vinculado a otro proyecto. Desvincúlalo antes de asociarlo a este proyecto.', 'error')
+      } else {
+        showToast('Error al agregar contrato', 'error')
+      }
     }
+  })
+  const updateProjectMutation = useMutation({
+    mutationFn: async (projectData: any) => {
+      if (!proyecto) throw new Error('No project to update')
+      await ProjectService.actualizarProyecto(proyecto.id, projectData)
+    },
+    onSuccess: async () => {
+      await refetch()
+      setShowEditForm(false)
+      showToast('Proyecto actualizado exitosamente', 'success')
+    },
+    onError: (error: any) => {
+      console.error('Error updating project:', error)
+      showToast('Error al actualizar el proyecto', 'error')
+    }
+  })
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: async () => {
+      if (!proyecto) throw new Error('No project to delete')
+      
+      // Only delete the project, not the contracts
+      // Contracts will be unlinked automatically by the service
+      await eliminarProyecto(proyecto.id)
+    },
+    onSuccess: () => {
+      showToast('Proyecto eliminado exitosamente. Los contratos han sido desvinculados.', 'success')
+      navigate('/projects')
+    },
+    onError: (error: any) => {
+      console.error('Error deleting project:', error)
+      showToast('Error al eliminar el proyecto', 'error')
+    }
+  })
+
+  const handleEditProject = async (projectData: any) => {
+    return new Promise<void>((resolve, reject) => {
+      updateProjectMutation.mutate(projectData, {
+        onSuccess: () => resolve(),
+        onError: (error) => reject(error)
+      })
+    })
+  }
+
+  const handleDeleteProject = () => {
+    deleteProjectMutation.mutate()
+    setShowDeleteConfirm(false)
+  }
+
+  const handleCreateContract = () => {
+    setShowContractForm(false)
+    refetch() // Refresh the project data to show the new contract
   }
 
   const handleDeleteContract = async (contractId: string) => {
@@ -42,6 +109,10 @@ const ProjectDetail: React.FC = () => {
       console.error('Error desvinculando contrato del proyecto:', error)
       // Error toast will be shown by the hook automatically
     }
+  }
+
+  const handleAddContractToProject = (contrato: any) => {
+    linkContractMutation.mutate(contrato)
   }
 
   if (loading) {
@@ -153,7 +224,10 @@ const ProjectDetail: React.FC = () => {
               </div>
             </div>
           </div>          <div className="flex space-x-3">
-            <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors">
+            <button 
+              onClick={() => setShowEditForm(true)}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
+            >
               Editar
             </button>
             <button 
@@ -162,8 +236,17 @@ const ProjectDetail: React.FC = () => {
             >
               Eliminar
             </button>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-              Nuevo Contrato
+            <button 
+              onClick={() => setShowContractForm(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              + Nuevo Contrato
+            </button>
+            <button 
+              onClick={() => setShowContractSelect(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              + Vincular Contrato
             </button>
           </div>
         </div>
@@ -178,164 +261,69 @@ const ProjectDetail: React.FC = () => {
         {proyecto.etiquetas.length > 0 && (
           <div className="mt-4">
             <div className="flex flex-wrap gap-2">
-              {proyecto.etiquetas.map((etiqueta, index) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                >
+              {proyecto.etiquetas.map((etiqueta) => (
+                <span key={etiqueta} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
                   {etiqueta}
                 </span>
               ))}
             </div>
           </div>
         )}
-      </div>
 
-      {/* Métricas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        {/* Progreso financiero */}
+        <div className="mt-6">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Contratos Totales</p>
-              <p className="text-2xl font-bold text-gray-900">{estadisticas?.totalContratos || 0}</p>
+            <div className="text-sm font-medium text-gray-700">
+              Presupuesto: {formatCurrency(proyecto.presupuestoTotal)}
             </div>
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-blue-600">📄</span>
+            <div className="text-sm font-medium text-gray-700">
+              Gastado: {formatCurrency(proyecto.presupuestoGastado)}
             </div>
           </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Contratos Activos</p>
-              <p className="text-2xl font-bold text-green-600">{estadisticas?.contratosActivos || 0}</p>
-            </div>
-            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-              <span className="text-green-600">✅</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Valor Total</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {formatCurrency(estadisticas?.valorTotal || 0, proyecto.moneda)}
-              </p>
-            </div>
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-              <span className="text-purple-600">💰</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Por Vencer</p>
-              <p className="text-2xl font-bold text-orange-600">{estadisticas?.contratosPorVencer || 0}</p>
-            </div>
-            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-              <span className="text-orange-600">⚠️</span>
-            </div>
+          <div className="mt-2 h-2.5 bg-gray-200 rounded-full">
+            <div
+              className="h-2.5 bg-green-600 rounded-full"
+              style={{ width: `${progreso}%` }}
+            />
           </div>
         </div>
       </div>
 
-      {/* Información del proyecto */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Información general */}
-        <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Información del Proyecto
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="text-sm font-medium text-gray-600 mb-3">Fechas</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Inicio:</span>
-                  <span className="text-gray-900">{proyecto.fechaInicio.toLocaleDateString('es-CL')}</span>
-                </div>
-                {proyecto.fechaFinEstimada && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Fin estimado:</span>
-                    <span className="text-gray-900">{proyecto.fechaFinEstimada.toLocaleDateString('es-CL')}</span>
-                  </div>
-                )}
-                {proyecto.fechaFinReal && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Fin real:</span>
-                    <span className="text-gray-900">{proyecto.fechaFinReal.toLocaleDateString('es-CL')}</span>
-                  </div>
-                )}
-              </div>
+      {/* Estadísticas del proyecto */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Estadísticas del Proyecto
+        </h2>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="text-blue-700 text-sm font-medium">
+              Presupuesto Total
             </div>
-
-            <div>
-              <h4 className="text-sm font-medium text-gray-600 mb-3">Equipo</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Responsable:</span>
-                  <span className="text-gray-900">{proyecto.responsableId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Miembros:</span>
-                  <span className="text-gray-900">{proyecto.equipoIds.length} personas</span>
-                </div>
-              </div>
+            <div className="mt-1 text-2xl font-bold">
+              {formatCurrency(proyecto.presupuestoTotal)}
             </div>
           </div>
-        </div>
-
-        {/* Progreso presupuestario */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Presupuesto
-          </h3>
-          
-          <div className="space-y-4">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-900 mb-1">
-                {progreso}%
-              </div>
-              <div className="text-sm text-gray-600">
-                Ejecutado
-              </div>
+          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <div className="text-green-700 text-sm font-medium">
+              Presupuesto Gastado
             </div>
-
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div 
-                className="h-3 rounded-full transition-all duration-300"
-                style={{ 
-                  width: `${Math.min(progreso, 100)}%`,
-                  backgroundColor: progreso > 90 ? '#EF4444' : progreso > 70 ? '#F59E0B' : '#10B981'
-                }}
-              />
+            <div className="mt-1 text-2xl font-bold">
+              {formatCurrency(proyecto.presupuestoGastado)}
             </div>
-
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Gastado:</span>
-                <span className="text-gray-900 font-medium">
-                  {formatCurrency(proyecto.presupuestoGastado, proyecto.moneda)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Presupuesto:</span>
-                <span className="text-gray-900 font-medium">
-                  {formatCurrency(proyecto.presupuestoTotal, proyecto.moneda)}
-                </span>
-              </div>
-              <div className="flex justify-between border-t pt-2">
-                <span className="text-gray-600">Disponible:</span>
-                <span className="text-gray-900 font-medium">
-                  {formatCurrency(proyecto.presupuestoTotal - proyecto.presupuestoGastado, proyecto.moneda)}
-                </span>
-              </div>
+          </div>          <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <div className="text-yellow-700 text-sm font-medium">
+              Contratos Activos
+            </div>
+            <div className="mt-1 text-2xl font-bold">
+              {estadisticas?.contratosActivos || 0}
+            </div>
+          </div>
+          <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+            <div className="text-red-700 text-sm font-medium">
+              Contratos Finalizados
+            </div>
+            <div className="mt-1 text-2xl font-bold">
+              {estadisticas?.contratosVencidos || 0}
             </div>
           </div>
         </div>
@@ -343,87 +331,125 @@ const ProjectDetail: React.FC = () => {
 
       {/* Lista de contratos */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Contratos del Proyecto ({contratos.length})
-          </h3>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-            + Nuevo Contrato
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Contratos Asociados
+          </h2>
+          <button 
+            onClick={() => setShowContractSelect(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            + Agregar Contrato
           </button>
         </div>
 
-        {contratos.length > 0 ? (          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {contratos.map((contrato) => (
-              <ContractCard 
-                key={contrato.id} 
-                contrato={contrato} 
-                onEliminar={() => handleDeleteContract(contrato.id)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-gray-400 text-4xl mb-4">📄</div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">
-              No hay contratos
-            </h4>
-            <p className="text-gray-600 mb-4">
-              Este proyecto aún no tiene contratos asociados
-            </p>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-              Crear Primer Contrato
-            </button>
-          </div>        )}
-      </div>
-
-      {/* Delete Confirmation Dialog */}
+        <div className="mt-4">
+          {contratos.length === 0 ? (
+            <div className="text-center text-gray-500 py-4">
+              No hay contratos asociados a este proyecto.
+            </div>
+          ) : (            <div className="space-y-4">
+              {contratos.map((contrato) => (
+                <ContractCard
+                  key={contrato.id}
+                  contrato={contrato}
+                  onEliminar={() => handleDeleteContract(contrato.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>      {/* Confirmación de eliminación */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.314 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">
-                  Confirmar eliminación
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Esta acción no se puede deshacer
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Confirmar Eliminación del Proyecto
+            </h3>
+            <div className="text-gray-700 text-sm mt-3 space-y-2">
+              <p>¿Estás seguro de que deseas eliminar este proyecto?</p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-yellow-800 font-medium text-xs">
+                  ⚠️ Importante:
                 </p>
+                <ul className="text-yellow-700 text-xs mt-1 space-y-1">
+                  <li>• El proyecto será eliminado permanentemente</li>
+                  <li>• Los contratos asociados NO serán eliminados</li>
+                  <li>• Los contratos quedarán desvinculados del proyecto</li>
+                  <li>• Esta acción no se puede deshacer</li>
+                </ul>
               </div>
             </div>
-            <p className="text-gray-700 mb-6">
-              ¿Estás seguro de que deseas eliminar el proyecto <strong>"{proyecto?.nombre}"</strong>? 
-              Se eliminarán todos los datos asociados, incluyendo contratos y documentos.
-            </p>
-            <div className="flex space-x-3 justify-end">
+            <div className="mt-6 flex justify-end space-x-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                disabled={isDeleting}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors disabled:opacity-50"
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDeleteProject}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={deleteProjectMutation.isPending}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  deleteProjectMutation.isPending
+                    ? 'bg-red-300 text-gray-400 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700 text-white'
+                }`}
               >
-                {isDeleting ? (
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Eliminando...
-                  </div>
-                ) : (
-                  'Eliminar Proyecto'
-                )}
+                {deleteProjectMutation.isPending ? 'Eliminando...' : 'Eliminar Proyecto'}
               </button>
             </div>
           </div>
         </div>
+      )}      {/* Modal para seleccionar contrato existente */}
+      {showContractSelect && (
+        <ContractSelectModal
+          isOpen={showContractSelect}
+          onClose={() => setShowContractSelect(false)}
+          onSelect={handleAddContractToProject}
+          proyecto={proyecto}
+        />
+      )}
+
+      {/* Modal para editar proyecto */}
+      {showEditForm && proyecto && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Editar Proyecto</h2>
+              <ProjectForm
+                proyecto={proyecto}
+                onSubmit={handleEditProject}
+                onCancel={() => setShowEditForm(false)}
+                isLoading={updateProjectMutation.isPending}
+              />
+            </div>
+          </div>
+        </div>
+      )}      {/* Modal para crear nuevo contrato */}
+      {showContractForm && proyecto && (
+        <ContractForm
+          isOpen={showContractForm}
+          onClose={() => setShowContractForm(false)}
+          onSuccess={handleCreateContract}
+          contractToEdit={{
+            titulo: '',
+            descripcion: '',
+            contraparte: '',
+            fechaInicio: '',
+            fechaTermino: '',
+            monto: 0,
+            moneda: 'CLP',
+            categoria: 'SERVICIOS' as CategoriaContrato,
+            periodicidad: 'UNICO' as Periodicidad,
+            tipo: 'EGRESO' as TipoEconomico,
+            proyecto: proyecto.nombre,
+            proyectoId: proyecto.id,
+            estado: 'BORRADOR' as EstadoContrato,
+            departamento: proyecto.departamento || '',
+            etiquetas: []
+          }}
+        />
       )}
     </div>
   )

@@ -77,7 +77,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   ]
 
   const handleFormSubmit = async (data: ProjectFormData) => {
-    try {      const projectData = {
+    try {
+      const baseProjectData = {
         ...data,
         estado: data.estado as EstadoProyecto,
         prioridad: data.prioridad as PrioridadProyecto,
@@ -89,12 +90,21 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         contratosPendientes: proyecto?.contratosPendientes || 0,
         valorTotalContratos: proyecto?.valorTotalContratos || 0,
         fechaInicio: new Date(data.fechaInicio),
-        fechaFinEstimada: data.fechaFinEstimada ? new Date(data.fechaFinEstimada) : undefined,
-        fechaFinReal: proyecto?.fechaFinReal || undefined,
         equipoIds: proyecto?.equipoIds || [],
         etiquetas: proyecto?.etiquetas || [],
         creadoPor: proyecto?.creadoPor || usuario?.id || '',
         modificadoPor: usuario?.id || ''
+      }
+
+      // Add optional fields only if they exist
+      const projectData: any = { ...baseProjectData }
+      
+      if (data.fechaFinEstimada && data.fechaFinEstimada !== null) {
+        projectData.fechaFinEstimada = new Date(data.fechaFinEstimada)
+      }
+      
+      if (proyecto?.fechaFinReal) {
+        projectData.fechaFinReal = proyecto.fechaFinReal
       }
 
       await onSubmit(projectData)

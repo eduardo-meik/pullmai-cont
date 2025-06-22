@@ -97,3 +97,12 @@ This document outlines the planned features, enhancements, and technical improve
 | **Implement Testing Strategy**        |   High   |   Medium   | Introduce unit and integration tests (e.g., with Vitest, React Testing Library) to ensure reliability.  |
 | **CI/CD Pipeline**                    |  Medium  |   Medium   | Set up a GitHub Actions pipeline to automate testing and deployments.                                   |
 | **Environment Configuration**         |   High   |    Low     | Formalize the use of `.env` files for development, staging, and production environments.                |
+
+---
+
+## 🧪 QA / Bugs & Investigation
+
+| Task                                                                 | Priority | Status    | Notes                                                                                                   |
+| -------------------------------------------------------------------- | :------: | :-------: | ------------------------------------------------------------------------------------------------------- |
+| Check if restriction of linking a contract already linked to another proyecto is working |  High   |   TODO    | Test the new backend and UI logic for contract linking restrictions.                                    |
+| Investigate double signin issue and console message: "DEBUG: User custom claims: ..."   |  High   |   TODO    | User must sign in twice; check auth flow and why custom claims debug appears.                           |

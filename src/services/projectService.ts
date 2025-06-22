@@ -266,8 +266,14 @@ export class ProjectService {
   static async actualizarProyecto(id: string, cambios: Partial<Proyecto>): Promise<boolean> {
     try {
       const proyectoRef = doc(db, 'proyectos', id)
+      
+      // Filter out undefined values to prevent Firebase errors
+      const filteredChanges = Object.fromEntries(
+        Object.entries(cambios).filter(([_, value]) => value !== undefined)
+      )
+      
       const actualizacion = {
-        ...cambios,
+        ...filteredChanges,
         fechaUltimaModificacion: Timestamp.now(),
         version: (cambios.version || 1) + 1
       }

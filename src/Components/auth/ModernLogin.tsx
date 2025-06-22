@@ -72,7 +72,7 @@ const ModernLogin: React.FC = () => {
     
     return errorMap[errorCode] || 'Error inesperado al iniciar sesión. Intenta nuevamente'
   }
-
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     

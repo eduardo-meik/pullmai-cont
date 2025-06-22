@@ -63,9 +63,20 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
     const provider = new GithubAuthProvider()
     return signInWithPopup(auth, provider)
   }
-
-  function login(email: string, password: string): Promise<any> {
-    return signInWithEmailAndPassword(auth, email, password)
+  async function login(email: string, password: string): Promise<any> {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password)
+    
+    // Wait for the auth state to be fully processed
+    await new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user && user.uid === userCredential.user.uid) {
+          unsubscribe()
+          resolve(void 0)
+        }
+      })
+    })
+    
+    return userCredential
   }
 
   function logout(): Promise<void> {
@@ -93,16 +104,12 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
 
   function getCurrentUserToken(): Promise<string | null> {
     return currentUser ? currentUser.getIdToken() : Promise.resolve(null)
-  }
-  useEffect(() => {
+  }  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const tokenResult = await user.getIdTokenResult();
-        console.log('DEBUG: User authenticated. Claims:', tokenResult.claims);
-
+        // Get user profile or create default one
         let userProfile = await UserService.getUserProfile(user.uid)
         
-        // If no user profile exists, create a default one
         if (!userProfile) {
           userProfile = {
             id: user.uid,
@@ -121,10 +128,6 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
         }
         
         setUsuario(userProfile)
-        // Debug: Print user's custom claims
-        user.getIdTokenResult().then(r => {
-          console.log('DEBUG: User custom claims:', r.claims)
-        })
       } else {
         logoutFromStore()
       }

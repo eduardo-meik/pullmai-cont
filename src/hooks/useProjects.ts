@@ -71,12 +71,12 @@ export const useProjects = (organizacionId?: string) => {
       throw err
     }
   }
-
   return {
     proyectos,
     loading,
     error,
     cargarProyectos,
+    refetchProjects: cargarProyectos, // Alias for cargarProyectos
     crearProyecto,
     actualizarProyecto,
     eliminarProyecto
