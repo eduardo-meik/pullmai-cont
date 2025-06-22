@@ -52,7 +52,6 @@ const ContraparteDetailedView: React.FC<ContraparteDetailedViewProps> = ({
       loadDetailedInfo()
     }
   }, [isOpen, organizacion.id])
-
   const loadDetailedInfo = async () => {
     setLoading(true)
     try {
@@ -60,7 +59,13 @@ const ContraparteDetailedView: React.FC<ContraparteDetailedViewProps> = ({
       setDetailedInfo(info)
     } catch (error) {
       console.error('Error loading detailed info:', error)
-      showToast('Error al cargar información detallada', 'error')
+      const errorMessage = error instanceof Error ? error.message : 'Error al cargar información detallada'
+      
+      if (errorMessage.includes('No tienes acceso')) {
+        showToast('No tienes permisos para ver información detallada de esta organización', 'warning')
+      } else {
+        showToast(errorMessage, 'error')
+      }
     } finally {
       setLoading(false)
     }
@@ -530,7 +535,42 @@ const ContraparteDetailedView: React.FC<ContraparteDetailedViewProps> = ({
                 </div>
               )}
             </div>
-          </>
+          </>        )}
+
+        {/* No Access or No Data State */}
+        {!loading && !detailedInfo && (
+          <div className="p-8 text-center">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
+              <ExclamationTriangleIcon className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Información No Disponible</h3>
+              <p className="text-gray-600 mb-4">
+                No se pudo cargar la información detallada de esta organización. 
+                Esto puede deberse a permisos de acceso o falta de datos.
+              </p>
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
+                <h4 className="font-medium text-gray-900 mb-2">Información Básica Disponible:</h4>
+                <div className="text-left space-y-2">
+                  <p><span className="font-medium">Nombre:</span> {organizacion.nombre}</p>
+                  {organizacion.descripcion && (
+                    <p><span className="font-medium">Descripción:</span> {organizacion.descripcion}</p>
+                  )}
+                  <p><span className="font-medium">Estado:</span> {organizacion.activa ? 'Activa' : 'Inactiva'}</p>                  {organizacion.fechaCreacion && (
+                    <p><span className="font-medium">Fecha de Creación:</span> {
+                      (() => {
+                        const fecha = organizacion.fechaCreacion
+                        if (fecha instanceof Date) {
+                          return format(fecha, 'dd/MM/yyyy')
+                        } else if (fecha && typeof fecha === 'object' && 'toDate' in fecha) {
+                          return format((fecha as any).toDate(), 'dd/MM/yyyy')
+                        }
+                        return 'No disponible'
+                      })()
+                    }</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
