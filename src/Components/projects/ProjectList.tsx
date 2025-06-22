@@ -1,11 +1,33 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useProjects } from '../../hooks/useProjects'
 import { EstadoProyecto, PrioridadProyecto } from '../../types'
 import LoadingSpinner from '../ui/LoadingSpinner'
+import ProjectForm from './ProjectForm'
+import { useToast } from '../../contexts/ToastContext'
 
 const ProjectList: React.FC = () => {
-  const { proyectos, loading, error } = useProjects()
+  const { proyectos, loading, error, crearProyecto } = useProjects()
+  const { showToast } = useToast()
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+
+  const handleCreateProject = async (projectData: any) => {
+    try {
+      setIsCreating(true)
+      const newProjectId = await crearProyecto(projectData)
+      setShowCreateForm(false)
+      showToast('Proyecto creado exitosamente', 'success')
+      // Optionally navigate to the new project
+      // navigate(`/projects/${newProjectId}`)
+    } catch (error) {
+      console.error('Error creating project:', error)
+      showToast('Error al crear el proyecto', 'error')
+      throw error // Re-throw to let the form handle it
+    } finally {
+      setIsCreating(false)
+    }
+  }
 
   if (loading) {
     return (      <div className="flex justify-center items-center min-h-64">
@@ -77,8 +99,10 @@ const ProjectList: React.FC = () => {
           <p className="text-gray-600 mt-1">
             Gestiona y monitorea todos los proyectos de la organización
           </p>
-        </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+        </div>        <button 
+          onClick={() => setShowCreateForm(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
           + Nuevo Proyecto
         </button>
       </div>
@@ -203,10 +227,28 @@ const ProjectList: React.FC = () => {
           </h3>
           <p className="text-gray-600 mb-6">
             Comienza creando tu primer proyecto para organizar los contratos
-          </p>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
-            Crear Primer Proyecto
-          </button>
+          </p>          <button 
+            onClick={() => setShowCreateForm(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+          >
+            Crear Primer Proyecto          </button>
+        </div>
+      )}
+
+      {/* Modal para crear nuevo proyecto */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Crear Nuevo Proyecto</h2>
+              <ProjectForm
+                proyecto={null}
+                onSubmit={handleCreateProject}
+                onCancel={() => setShowCreateForm(false)}
+                isLoading={isCreating}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
