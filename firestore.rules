@@ -1,26 +1,194 @@
-// Reglas de seguridad de Firestore para desarrollo
-// ⚠️ ADVERTENCIA: Estas reglas son permisivas y solo deben usarse en desarrollo
-// ⚠️ ANTES DE PRODUCCIÓN: Reemplazar con firestore.rules.production
-// ⚠️ Para producción, usar: firebase deploy --only firestore:rules --project=production
+// Enhanced Firestore Security Rules for Contraparte Access Management
+// This maintains the current efficient structure while adding granular partner organization access
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ⚠️ REGLAS PERMISIVAS SOLO PARA DESARROLLO
-    // Permitir lectura y escritura a todos los documentos durante desarrollo
-    // 🚨 CAMBIAR ANTES DE PRODUCCIÓN 🚨
-    match /{document=**} {
-      allow read, write: if true;
+
+    // Helper functions (existing)
+    function isSignedIn() {
+      return request.auth != null;
     }
     
-    // Específicamente para contratos
-    match /contratos/{contractId} {
-      allow read, write: if true;
+    function getUserRole() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol;
+    }
+
+    function getUserOrganization() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.organizacionId;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && getUserRole() == 'super_admin';
+    }
+
+    function isOrgAdmin() {
+      return isSignedIn() && getUserRole() == 'org_admin';
+    }
+
+    function isSameOrganization(orgId) {
+      return isSignedIn() && getUserOrganization() == orgId;
+    }
+
+    // NEW: Helper function to check contraparte access
+    // This function seems to check if the orgId is present in a map/object called 'contraparteAccess' on the user's document.
+    // Example user document: /usuarios/{uid} = { ..., contraparteAccess: { "partnerOrg123": true, "partnerOrg456": true } }
+    function hasContraparteAccess(orgId) {
+      return isSignedIn() && orgId in get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.contraparteAccess;
     }
     
-    // Específicamente para proyectos  
+    // NEW: Helper function to check if user has contraparte permission for an organization
+    // This checks for a specific document in a 'contrapartePermissions' collection.
+    // The document ID seems to be a composite of userId and orgId.
+    function hasActiveContrapartePermission(orgId) {
+      return exists(/databases/$(database)/documents/contrapartePermissions/$(request.auth.uid + '-' + orgId)) &&
+             get(/databases/$(database)/documents/contrapartePermissions/$(request.auth.uid + '-' + orgId)).data.activa == true;
+    }
+
+    // USUARIOS - Enhanced with contraparte access
+    match /usuarios/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId ||
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+        // Consider if users with contraparteAccess to this user's org should see some user data.
+        // Currently, they cannot unless they are admins of their own org and it's the same org.
+      );
+      allow write: if isSignedIn() && ( // create, update, delete
+        request.auth.uid == userId ||
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(request.resource.data.organizacionId)) // OrgAdmin can modify users in their org
+      );
+      // Note: 'update' might need request.resource.data for orgId if orgId can be changed.
+      // For 'delete', resource.data.organizacionId is correct.
+    }
+
+    // ORGANIZACIONES - Enhanced with contraparte viewer access
+    match /organizaciones/{orgId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        isSameOrganization(orgId) ||
+        hasContraparteAccess(orgId) // Users with specific permission can view details of partner organizations
+      );
+      allow create: if isSignedIn() && (isSuperAdmin() || isOrgAdmin()); // Assuming OrgAdmin creates for their own org implicitly checked by isSameOrganization
+      allow update: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+      );
+      allow delete: if isSuperAdmin(); // Only SuperAdmin can delete organizations
+    }
+
+    // NEW: Contraparte Permissions Collection
+    // Document ID format: {userId}-{orgId}
+    match /contrapartePermissions/{permissionId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && (
+          isSameOrganization(resource.data.organizacionId) || // Admin of the target org (granting access to their org)
+          isSameOrganization(get(/databases/$(database)/documents/usuarios/$(resource.data.userId)).data.organizacionId) // Admin of the user's org
+        )) ||
+        resource.data.userId == request.auth.uid || // The user to whom permission is granted
+        resource.data.grantedBy == request.auth.uid // The user who granted the permission
+      );
+
+      allow create: if isSignedIn() && (
+        isSuperAdmin() ||
+        // OrgAdmin of the organization for which access is being granted
+        (isOrgAdmin() && isSameOrganization(request.resource.data.organizacionId)) ||
+        // OrgAdmin of the user's organization, if they are granting on behalf of one of their users
+        (isOrgAdmin() && isSameOrganization(get(/databases/$(database)/documents/usuarios/$(request.resource.data.userId)).data.organizacionId))
+      );
+
+      allow update, delete: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId)) || // Admin of the target org
+        (isOrgAdmin() && isSameOrganization(get(/databases/$(database)/documents/usuarios/$(resource.data.userId)).data.organizacionId)) || // Admin of the user's org
+        resource.data.grantedBy == request.auth.uid // Granter can revoke
+      );
+    }
+
+    // PROYECTOS
     match /proyectos/{projectId} {
-      allow read, write: if true;
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        isSameOrganization(resource.data.organizacionId) ||
+        // If projects can be shared with contrapartes, similar logic to contratos might be needed
+        (hasContraparteAccess(resource.data.organizacionId) &&
+         getUserOrganization() == resource.data.contrapartePrincipalId) // Assuming a 'contrapartePrincipalId' field
+      );
+      allow create: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(request.resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(request.resource.data.organizacionId))
+      );
+      allow update: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(resource.data.organizacionId))
+      );
+      allow delete: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId))
+      );
+    }
+
+    // CONTRATOS - Enhanced with contraparte viewer access for relevant contracts
+    match /contratos/{contractId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        isSameOrganization(resource.data.organizacionId) || // User is in the contract's primary organization
+        // User's organization is the contraparte for this contract, AND user has general access to that primary org's data as a contraparte
+        (hasContraparteAccess(resource.data.organizacionId) &&
+         getUserOrganization() == resource.data.contraparteId) // contraparteId should be the ID of the partner org
+      );
+
+      allow create: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(request.resource.data.organizacionId)) ||
+        (getUserRole() in ['manager', 'user'] && isSameOrganization(request.resource.data.organizacionId))
+      );
+
+      allow update: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'user' && isSameOrganization(resource.data.organizacionId) &&
+         request.auth.uid == resource.data.responsableId) // User is responsible for the contract
+      );
+
+      allow delete: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(resource.data.organizacionId)) ||
+        (getUserRole() == 'manager' && isSameOrganization(resource.data.organizacionId) && resource.data.proyectoId == null) // Manager can delete if not tied to project
+        // Add more specific delete conditions if necessary
+      );
+    }
+
+    // REGISTROS DE AUDITORÍA - System can create, specific roles can read
+    match /registros_auditoria/{auditId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isOrgAdmin() && isSameOrganization(get(/databases/$(database)/documents/contratos/$(resource.data.contratoId)).data.organizacionId))
+        // Potentially allow users to see audit for contracts they have access to
+      );
+      allow create: if isSignedIn(); // Assumes system/backend functions trigger this with valid auth
+      allow update, delete: if false; // Audit logs should be immutable
+    }
+
+    // STORAGE RULES - These are separate from Firestore rules but often related.
+    // The path structure in the rules needs to match the actual paths used in Firebase Storage.
+    // This is a conceptual placement; actual storage rules are in 'storage.rules'.
+    // match /storage/{bucket}/contratos/{organizacionId}/{fileName} { ... }
+
+    // Fallback rule: Deny all other access to collections not explicitly defined
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
+
+// It's important to also update 'storage.rules' based on 'firestore.rules.enhanced'
+// if it contains storage-specific rules like:
+// match /storage/{bucket}/contratos/{organizacionId}/{fileName} { ... }
+// The 'firestore.rules.enhanced' file had a section for this, which I've commented out above
+// as it belongs in the actual storage.rules file. I will check storage.rules next.

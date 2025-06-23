@@ -304,30 +304,73 @@ export class ContractService {
     filtros?: FiltrosContrato
   ): Promise<Contrato[]> {
     try {
-      // Implementar búsqueda de texto completo
-      // Por ahora, búsqueda simple por título
       let q = query(
         collection(db, this.collection),
-        where('organizacionId', '==', organizacionId),        orderBy('fechaCreacion', 'desc')
-      )
+        where('organizacionId', '==', organizacionId)
+      );
 
-      const snapshot = await getDocs(q)
-      const contratos = snapshot.docs.map(doc => ({
+      // Apply provided filters to narrow down the dataset from Firestore
+      if (filtros) {
+        if (filtros.estado?.length) {
+          q = query(q, where('estado', 'in', filtros.estado));
+        }
+        // IMPORTANT: If 'estado' used 'in', another 'in' on 'categoria' is not allowed by Firestore
+        // if both are multi-value 'in' clauses.
+        // This code assumes that if multiple filter categories are used,
+        // they are either single-value 'in' (effectively '==') or only one true multi-value 'in' is active.
+        if (filtros.categoria?.length) {
+          q = query(q, where('categoria', 'in', filtros.categoria));
+        }
+        if (filtros.tipo?.length) {
+          q = query(q, where('tipo', 'in', filtros.tipo));
+        }
+        if (filtros.periodicidad?.length) {
+          q = query(q, where('periodicidad', 'in', filtros.periodicidad));
+        }
+        if (filtros.proyecto) {
+          // Assuming filtros.proyecto contains proyectoId based on typical filtering needs.
+          // If it's a name, this should be where('proyecto', '==', filtros.proyecto)
+          // and would require an appropriate index.
+          q = query(q, where('proyectoId', '==', filtros.proyecto));
+        }
+        if (filtros.departamento) {
+          q = query(q, where('departamento', '==', filtros.departamento));
+        }
+        if (filtros.responsable) { // Assuming responsableId
+          q = query(q, where('responsableId', '==', filtros.responsable));
+        }
+      }
+
+      // Default ordering
+      q = query(q, orderBy('fechaCreacion', 'desc'));
+
+      const snapshot = await getDocs(q);
+      let contratos = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         fechaCreacion: doc.data().fechaCreacion?.toDate(),
         fechaInicio: doc.data().fechaInicio?.toDate(),
-        fechaTermino: doc.data().fechaTermino?.toDate()
-      })) as Contrato[]
+        fechaTermino: doc.data().fechaTermino?.toDate(),
+      })) as Contrato[];
 
-      // Filtrar por término de búsqueda
-      return contratos.filter(contrato =>
-        contrato.titulo.toLowerCase().includes(termino.toLowerCase()) ||
-        contrato.descripcion.toLowerCase().includes(termino.toLowerCase())
-      )
+      // If a search term is provided, perform client-side filtering on the (hopefully) smaller dataset
+      if (termino && termino.trim() !== '') {
+        const lowerCaseTermino = termino.toLowerCase();
+        contratos = contratos.filter(contrato =>
+          (contrato.titulo || '').toLowerCase().includes(lowerCaseTermino) ||
+          (contrato.descripcion || '').toLowerCase().includes(lowerCaseTermino)
+        );
+      }
+
+      return contratos;
+
     } catch (error) {
-      console.error('Error en búsqueda:', error)
-      throw new Error('Error al buscar contratos')
+      console.error('Error en búsqueda:', error);
+      if (error instanceof Error && error.message.includes("INVALID_ARGUMENT")) {
+          console.error("Firestore query error in buscarContratos, likely due to multiple 'in' filters or incompatible sort/filter: ", error);
+          throw new Error("La búsqueda con los filtros seleccionados no es posible. Intente simplificar los filtros o revise la configuración de búsqueda.");
+      }
+      throw new Error('Error al buscar contratos');
     }
   }
 

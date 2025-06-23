@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query' // Added useInfiniteQuery
 import { contractService } from '../services/contractService'
 import { useAuthStore } from '../stores/authStore'
 import { useContractStore } from '../stores/contractStore'
@@ -32,6 +32,37 @@ export const useContracts = (filtros?: FiltrosContrato) => {
     cacheTime: 10 * 60 * 1000 // 10 minutos
   })
 }
+
+// New hook for infinite scrolling / "Load More" pagination
+export const useContractsInfinite = (filtros?: FiltrosContrato, pageSize = 20) => {
+  const { usuario } = useAuthStore();
+  // setLoading and setContratos from useContractStore might not be directly compatible
+  // with useInfiniteQuery's way of managing pages, unless the store is adapted.
+
+  return useInfiniteQuery({
+    queryKey: ['contratosInfinite', usuario?.organizacionId, filtros, pageSize],
+    queryFn: async ({ pageParam = undefined }) => { // pageParam will be the lastDoc from previous fetch
+      if (!usuario?.organizacionId) throw new Error('No hay organización');
+
+      // The contractService.getContratos already returns { contratos, hasMore, lastDoc }
+      const result = await contractService.getContratos(
+        usuario.organizacionId,
+        filtros,
+        pageSize,
+        pageParam // pageParam is the lastDoc from the previous fetch
+      );
+      return result;
+    },
+    getNextPageParam: (lastPage) => {
+      // lastPage is the full result object: { contratos, hasMore, lastDoc }
+      return lastPage.hasMore ? lastPage.lastDoc : undefined;
+    },
+    enabled: !!usuario?.organizacionId,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    cacheTime: 10 * 60 * 1000, // 10 minutos
+    // keepPreviousData: true, // Consider adding if you want to keep showing old data while new page loads
+  });
+};
 
 export const useContract = (id: string) => {
   const { setContratoSeleccionado } = useContractStore()

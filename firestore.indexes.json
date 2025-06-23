@@ -4,60 +4,88 @@
       "collectionGroup": "contratos",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "proyecto",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "fechaCreacion",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "proyecto", "order": "ASCENDING" },
+        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "contratos",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "proyectoId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "fechaCreacion",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "proyectoId", "order": "ASCENDING" },
+        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "contratos",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "organizacionId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "fechaCreacion",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "organizacionId", "order": "ASCENDING" },
+        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "contratos",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "organizacionId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "estado",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "fechaCreacion",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "organizacionId", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
+      ]
+    },
+    // Added Indexes:
+    {
+      "collectionGroup": "contratos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organizacionId", "order": "ASCENDING" },
+        { "fieldPath": "categoria", "order": "ASCENDING" },
+        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "contratos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organizacionId", "order": "ASCENDING" },
+        { "fieldPath": "tipo", "order": "ASCENDING" },
+        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "contratos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organizacionId", "order": "ASCENDING" },
+        { "fieldPath": "periodicidad", "order": "ASCENDING" },
+        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "contratos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organizacionId", "order": "ASCENDING" },
+        { "fieldPath": "departamento", "order": "ASCENDING" },
+        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "contratos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organizacionId", "order": "ASCENDING" },
+        { "fieldPath": "responsableId", "order": "ASCENDING" },
+        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "contratos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organizacionId", "order": "ASCENDING" },
+        { "fieldPath": "proyecto", "order": "ASCENDING" },
+        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
       ]
     }
   ],
