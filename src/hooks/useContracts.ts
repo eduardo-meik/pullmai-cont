@@ -34,6 +34,7 @@ export const useContracts = (filtros?: FiltrosContrato) => {
 }
 
 export const useContract = (id: string) => {
+  const { usuario } = useAuthStore() // Get the usuario object from the store
   const { setContratoSeleccionado } = useContractStore()
 
   return useQuery({
@@ -43,8 +44,8 @@ export const useContract = (id: string) => {
       setContratoSeleccionado(contrato)
       
       // Registrar acceso
-      if (contrato) {
-        await contractService.registrarAcceso(id, 'current-user-id')
+      if (contrato && usuario?.id) { // Check if usuario and usuario.id exist
+        await contractService.registrarAcceso(id, usuario.id) // Use usuario.id
       }
       
       return contrato

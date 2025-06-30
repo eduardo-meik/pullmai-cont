@@ -2,16 +2,113 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow read access to any authenticated user for debugging.
-    // Write access is still restricted to authenticated users.
-    match /contracts/{path=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null; // Keeping write restricted to auth users
+
+    // Helper function to get user data from Firestore
+    // Assumes user documents are in 'usuarios/{userId}'
+    function getUserData(userId) {
+      return firestore.get(/databases/(default)/documents/usuarios/$(userId)).data;
     }
 
-    // Spanish path for backward compatibility
-    match /contratos/{allPaths=**} {
-      allow read, write: if request.auth != null;
+    // Helper function to get a specific contract data from Firestore
+    // Assumes contract documents are in 'contratos/{contractId}'
+    // Note: This is not directly used in the rules below to avoid needing contractId in path for general org access,
+    // but could be used if rules were to be based on specific contract access.
+    // function getContractData(contractId) {
+    //   return firestore.get(/databases/(default)/documents/contratos/$(contractId)).data;
+    // }
+
+    // Function to check if the user is a Super Admin
+    function isSuperAdmin() {
+      return request.auth != null &&
+             request.auth.token.email_verified == true && // Ensure email is verified for production readiness
+             getUserData(request.auth.uid).rol == 'super_admin';
     }
+
+    // Function to check if the user is an Org Admin for the given organization (orgIdFromPath)
+    function isOrgAdmin(orgIdFromPath) {
+      return request.auth != null &&
+             request.auth.token.email_verified == true &&
+             getUserData(request.auth.uid).rol == 'org_admin' &&
+             getUserData(request.auth.uid).organizacionId == orgIdFromPath;
+    }
+
+    // Function to check if the user is a Manager for the given organization (orgIdFromPath)
+    function isOrgManager(orgIdFromPath) {
+      return request.auth != null &&
+             request.auth.token.email_verified == true &&
+             getUserData(request.auth.uid).rol == 'manager' &&
+             getUserData(request.auth.uid).organizacionId == orgIdFromPath;
+    }
+
+    // Function to check if the user is a regular User for the given organization (orgIdFromPath)
+    // For file uploads (write), 'user' role is generally permitted if they can create/edit contracts.
+    // For file reads, any authenticated user within the org can read.
+    function isOrgUser(orgIdFromPath) {
+      return request.auth != null &&
+             request.auth.token.email_verified == true &&
+             getUserData(request.auth.uid).rol == 'user' &&
+             getUserData(request.auth.uid).organizacionId == orgIdFromPath;
+    }
+
+    // Function to check if the user is any authenticated member of the organization (orgIdFromPath)
+    function isOrgMember(orgIdFromPath) {
+      return request.auth != null &&
+             request.auth.token.email_verified == true && // Basic check for all members
+             getUserData(request.auth.uid).organizacionId == orgIdFromPath;
+    }
+
+    // Rules for contract files stored under "contracts/{orgId}/{fileName}"
+    // orgId here is the organizacionId from the path where the file is stored.
+    match /contracts/{orgId}/{fileName} {
+      allow read: if request.auth != null &&
+                     request.auth.token.email_verified == true && // All users must have verified emails
+                     (
+                       isSuperAdmin() ||
+                       isOrgMember(orgId) // Any member of the organization can read contract files from their org.
+                                          // This aligns with Firestore rules where contracts are readable by org members.
+                     );
+
+      allow write: if request.auth != null &&
+                      request.auth.token.email_verified == true && // All users must have verified emails
+                      (
+                        isSuperAdmin() ||
+                        isOrgAdmin(orgId) ||
+                        isOrgManager(orgId) ||
+                        isOrgUser(orgId) // Users can upload if they are part of the org, mirroring contract creation rights.
+                      ) &&
+                      // Optional: Add size validation, e.g., request.resource.size < 10 * 1024 * 1024 (10MB)
+                      (request.resource == null || request.resource.size < 10 * 1024 * 1024) &&
+                      // Optional: Add content type validation, e.g., request.resource.contentType.matches('application/pdf')
+                      (request.resource == null || request.resource.contentType.matches('application/pdf'));
+    }
+
+    // Rules for LEGACY contract files stored under "contratos/{orgId}/{fileName}"
+    // Apply the same logic. It's crucial these also become secure.
+    match /contratos/{orgId}/{fileName} {
+      allow read: if request.auth != null &&
+                     request.auth.token.email_verified == true &&
+                     (
+                       isSuperAdmin() ||
+                       isOrgMember(orgId)
+                     );
+
+      allow write: if request.auth != null &&
+                      request.auth.token.email_verified == true &&
+                      (
+                        isSuperAdmin() ||
+                        isOrgAdmin(orgId) ||
+                        isOrgManager(orgId) ||
+                        isOrgUser(orgId)
+                      ) &&
+                      (request.resource == null || request.resource.size < 10 * 1024 * 1024) &&
+                      (request.resource == null || request.resource.contentType.matches('application/pdf'));
+    }
+
+    // By default, deny access to all other paths if not explicitly matched above.
+    // match /{allPaths=**} {
+    //  allow read, write: if false;
+    // }
+    // This explicit deny is not strictly necessary if the above rules cover all intended user accessible paths,
+    // as unmatched paths are denied by default.
   }
 }
