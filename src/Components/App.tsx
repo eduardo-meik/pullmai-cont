@@ -1,25 +1,11 @@
 import Signup from './Signup'
 import { AuthProvider } from '../contexts/AuthContext'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
+import { BrowserRouter as Router } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import Dashboard from './Dashboard'
-import Login from './Login'
-import PrivateRoutes from './PrivateRoutes'
-import ForgotPassword from './ForgotPassword'
-import UpdateProfile from './UpdateProfile'
-import Projects from './Projects'
-import ContractModule from './contracts/ContractModule'
-import ContraparteModule from './contrapartes/ContraparteModule'
-import DashboardLayout from './layout/DashboardLayout'
-import ProjectList from './projects/ProjectList'
-import ProjectDetail from './projects/ProjectDetail'
-import TermsAndConditions from './legal/TermsAndConditions'
-import PrivacyPolicy from './legal/PrivacyPolicy'
-import FirstTimeWizard from './onboarding/FirstTimeWizard'
-import { useFirstTimeWizard } from '../hooks/useFirstTimeWizard'
 import { ToastProvider } from '../contexts/ToastContext'
 import { ApiProvider } from '../contexts/ApiContext'
+import AppRoutes from './AppRoutes'
 import 'react-toastify/dist/ReactToastify.min.css'
 import AppContextProviders from '../contexts/AppContextProvider'
 
@@ -36,8 +22,6 @@ const queryClient = new QueryClient({
 })
 
 function App() {
-  const { showWizard, closeWizard, completeWizard } = useFirstTimeWizard()
-  
   const providers = [
     ToastProvider, 
     AuthProvider, 
@@ -52,30 +36,8 @@ function App() {
   
   return (
     <Router>
-      <AppContextProviders components={providers}>        <Routes>
-          <Route element={<PrivateRoutes />}>
-            <Route element={<DashboardLayout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/contratos" element={<ContractModule />} />
-              <Route path="/contrapartes" element={<ContraparteModule />} />
-              <Route path="/update-profile" element={<UpdateProfile />} />
-              <Route path="/projects" element={<ProjectList />} />
-              <Route path="/projects/:id" element={<ProjectDetail />} />
-            </Route>
-          </Route>
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/terms" element={<TermsAndConditions />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-        </Routes>
-        
-        {/* Global First Time Wizard - only shows for authenticated users */}
-        <FirstTimeWizard
-          isOpen={showWizard}
-          onClose={closeWizard}
-          onComplete={completeWizard}
-        />
+      <AppContextProviders components={providers}>
+        <AppRoutes />
       </AppContextProviders>
     </Router>
   )
