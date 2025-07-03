@@ -14,6 +14,8 @@ import ContraparteModule from './contrapartes/ContraparteModule'
 import DashboardLayout from './layout/DashboardLayout'
 import ProjectList from './projects/ProjectList'
 import ProjectDetail from './projects/ProjectDetail'
+import TermsAndConditions from './legal/TermsAndConditions'
+import PrivacyPolicy from './legal/PrivacyPolicy'
 import { ToastProvider } from '../contexts/ToastContext'
 import { ApiProvider } from '../contexts/ApiContext'
 import 'react-toastify/dist/ReactToastify.min.css'
@@ -60,6 +62,8 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
         </Routes>
       </AppContextProviders>
     </Router>
