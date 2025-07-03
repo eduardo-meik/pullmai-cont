@@ -16,6 +16,8 @@ import ProjectList from './projects/ProjectList'
 import ProjectDetail from './projects/ProjectDetail'
 import TermsAndConditions from './legal/TermsAndConditions'
 import PrivacyPolicy from './legal/PrivacyPolicy'
+import FirstTimeWizard from './onboarding/FirstTimeWizard'
+import { useFirstTimeWizard } from '../hooks/useFirstTimeWizard'
 import { ToastProvider } from '../contexts/ToastContext'
 import { ApiProvider } from '../contexts/ApiContext'
 import 'react-toastify/dist/ReactToastify.min.css'
@@ -34,6 +36,8 @@ const queryClient = new QueryClient({
 })
 
 function App() {
+  const { showWizard, closeWizard, completeWizard } = useFirstTimeWizard()
+  
   const providers = [
     ToastProvider, 
     AuthProvider, 
@@ -65,6 +69,13 @@ function App() {
           <Route path="/terms" element={<TermsAndConditions />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
         </Routes>
+        
+        {/* Global First Time Wizard - only shows for authenticated users */}
+        <FirstTimeWizard
+          isOpen={showWizard}
+          onClose={closeWizard}
+          onComplete={completeWizard}
+        />
       </AppContextProviders>
     </Router>
   )
