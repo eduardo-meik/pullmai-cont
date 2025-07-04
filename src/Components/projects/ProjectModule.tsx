@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useProjects } from '../../hooks/useProjects'
+import { useProjects, useProjectOperations } from '../../hooks/useProjects'
 import { useAuthStore } from '../../stores/authStore'
 import { Proyecto } from '../../types'
 import ProjectList from './ProjectList'
@@ -11,12 +11,12 @@ type ProjectView = 'list' | 'form' | 'detail'
 
 const ProjectModule: React.FC = () => {
   const { usuario } = useAuthStore()
-  const { crearProyecto, actualizarProyecto, refetchProjects } = useProjects(usuario?.organizacionId)
-  const { showToast } = useToast()
+  const { data: proyectos, isLoading: loadingProjects, error, refetch } = useProjects(usuario?.organizacionId)
+  const { crearProyecto, actualizarProyecto, isCreating, isUpdating } = useProjectOperations()
+  const { showTypedToast } = useToast()
   
   const [currentView, setCurrentView] = useState<ProjectView>('list')
   const [selectedProject, setSelectedProject] = useState<Proyecto | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
   const handleCreateProject = () => {
     setSelectedProject(null)
@@ -34,23 +34,19 @@ const ProjectModule: React.FC = () => {
   }
 
   const handleFormSubmit = async (projectData: Omit<Proyecto, 'id' | 'fechaCreacion' | 'fechaUltimaModificacion' | 'version'>) => {
-    setIsLoading(true)
     try {
       if (selectedProject) {
         // Editar proyecto existente
-        await actualizarProyecto(selectedProject.id, projectData)
+        await actualizarProyecto({ id: selectedProject.id, cambios: projectData })
       } else {
         // Crear nuevo proyecto
         await crearProyecto(projectData)
       }
-      await refetchProjects() // Force refresh after create/edit
       setCurrentView('list')
       setSelectedProject(null)
     } catch (error) {
       console.error('Error saving project:', error)
       throw error // Re-throw para que ProjectForm pueda manejarlo
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -66,7 +62,8 @@ const ProjectModule: React.FC = () => {
           <ProjectForm
             proyecto={selectedProject}
             onSubmit={handleFormSubmit}
-            onCancel={handleCancel}            isLoading={isLoading}
+            onCancel={handleCancel}
+            isLoading={selectedProject ? isUpdating : isCreating}
           />
         )
       case 'detail':

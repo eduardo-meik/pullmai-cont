@@ -1,350 +1,479 @@
-﻿import React, { useState, useEffect } from 'react'
-import {
+import React, { useState, useEffect, useMemo } from 'react'
+import { 
   ClockIcon,
-  DocumentMagnifyingGlassIcon,
-  UserIcon,
-  BuildingOfficeIcon,
-  CalendarIcon,
-  FunnelIcon,
   MagnifyingGlassIcon,
-  ArrowDownTrayIcon
+  AdjustmentsHorizontalIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
-import { useAuthStore } from '../../stores/authStore'
-import { UserRole } from '../../types'
-
-interface AuditEntry {
-  id: string
-  timestamp: Date
-  action: string
-  resource: string
-  resourceId: string
-  userId: string
-  userName: string
-  userEmail: string
-  organizationId: string
-  details: Record<string, any>
-  ipAddress?: string
-}
-
-type FilterType = 'all' | 'create' | 'update' | 'delete' | 'view' | 'login'
-type TimeRange = '24h' | '7d' | '30d' | '90d' | 'custom'
+import { useAuditRecords } from '../../hooks/useAuditRecords'
+import { formatDateTime } from '../../utils/dateUtils'
+import { RegistroAuditoria, AccionAuditoria } from '../../types'
 
 const AuditModule: React.FC = () => {
-  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([])
-  const [filteredEntries, setFilteredEntries] = useState<AuditEntry[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterType, setFilterType] = useState<FilterType>('all')
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d')
-  const [isLoading, setIsLoading] = useState(false)
-  const [startDate, setStartDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
-
   const { currentUser } = useAuth()
-  const { usuario } = useAuthStore()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedAction, setSelectedAction] = useState<AccionAuditoria | ''>('')
+  const [contratoId, setContratoId] = useState('')
+  const [usuarioId, setUsuarioId] = useState('')
+  const [fechaInicio, setFechaInicio] = useState('')
+  const [fechaFin, setFechaFin] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
 
-  const canViewAudit = usuario?.rol === UserRole.ORG_ADMIN || usuario?.rol === UserRole.SUPER_ADMIN
+  // Memoize the params object to prevent infinite re-renders
+  const auditParams = useMemo(() => ({
+    searchTerm,
+    accion: selectedAction || undefined,
+    contratoId: contratoId || undefined,
+    usuarioId: usuarioId || undefined,
+    fechaInicio: fechaInicio || undefined,
+    fechaFin: fechaFin || undefined
+  }), [searchTerm, selectedAction, contratoId, usuarioId, fechaInicio, fechaFin])
 
-  const actionTypes = [
-    { value: 'all', label: 'Todas las acciones' },
-    { value: 'create', label: 'Creación' },
-    { value: 'update', label: 'Actualización' },
-    { value: 'delete', label: 'Eliminación' },
-    { value: 'view', label: 'Visualización' },
-    { value: 'login', label: 'Inicio de sesión' }
+  const {
+    records,
+    loading,
+    error,
+    currentPage,
+    totalPages,
+    totalRecords,
+    loadRecords,
+    nextPage,
+    prevPage
+  } = useAuditRecords(auditParams)
+
+  const { stats, loading: statsLoading } = { stats: null, loading: false }
+
+  const actions: AccionAuditoria[] = [
+    AccionAuditoria.CREACION,
+    AccionAuditoria.MODIFICACION,
+    AccionAuditoria.VISUALIZACION,
+    AccionAuditoria.DESCARGA,
+    AccionAuditoria.ELIMINACION,
+    AccionAuditoria.CAMBIO_ESTADO,
+    AccionAuditoria.SUBIDA_DOCUMENTO,
+    AccionAuditoria.APROBACION,
+    AccionAuditoria.RECHAZO
   ]
 
-  const timeRanges = [
-    { value: '24h', label: 'Últimas 24 horas' },
-    { value: '7d', label: 'Últimos 7 días' },
-    { value: '30d', label: 'Últimos 30 días' },
-    { value: '90d', label: 'Últimos 90 días' },
-    { value: 'custom', label: 'Rango personalizado' }
-  ]
-
-  useEffect(() => {
-    if (canViewAudit) {
-      // TODO: Load audit entries from service
-      // For now, we'll use mock data
-      setIsLoading(true)
-      setTimeout(() => {
-        setAuditEntries([])
-        setIsLoading(false)
-      }, 1000)
-    }
-  }, [canViewAudit])
-
-  useEffect(() => {
-    let filtered = auditEntries
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(entry =>
-        entry.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.resource.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    // Filter by action type
-    if (filterType !== 'all') {
-      filtered = filtered.filter(entry => entry.action.toLowerCase().includes(filterType))
-    }
-
-    setFilteredEntries(filtered)
-  }, [auditEntries, searchTerm, filterType])
-
-  const formatTimestamp = (timestamp: Date) => {
-    return new Intl.DateTimeFormat('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(timestamp)
+  const handleApplyFilters = () => {
+    loadRecords()
   }
 
-  const getActionColor = (action: string) => {
-    if (action.includes('create')) return 'text-green-600 bg-green-50'
-    if (action.includes('update')) return 'text-blue-600 bg-blue-50'
-    if (action.includes('delete')) return 'text-red-600 bg-red-50'
-    if (action.includes('view')) return 'text-gray-600 bg-gray-50'
-    if (action.includes('login')) return 'text-purple-600 bg-purple-50'
-    return 'text-gray-600 bg-gray-50'
+  const clearFilters = () => {
+    setSearchTerm('')
+    setSelectedAction('')
+    setContratoId('')
+    setUsuarioId('')
+    setFechaInicio('')
+    setFechaFin('')
   }
 
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log('Exporting audit data...')
+  const getActionLabel = (action: AccionAuditoria): string => {
+    const labels: Record<AccionAuditoria, string> = {
+      [AccionAuditoria.CREACION]: 'Creación',
+      [AccionAuditoria.MODIFICACION]: 'Modificación',
+      [AccionAuditoria.VISUALIZACION]: 'Visualización',
+      [AccionAuditoria.DESCARGA]: 'Descarga',
+      [AccionAuditoria.ELIMINACION]: 'Eliminación',
+      [AccionAuditoria.CAMBIO_ESTADO]: 'Cambio de Estado',
+      [AccionAuditoria.SUBIDA_DOCUMENTO]: 'Subida de Documento',
+      [AccionAuditoria.APROBACION]: 'Aprobación',
+      [AccionAuditoria.RECHAZO]: 'Rechazo'
+    }
+    return labels[action] || action
   }
 
-  if (!canViewAudit) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-            <DocumentMagnifyingGlassIcon className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
-            <div className="text-yellow-800 text-lg font-medium mb-2">
-              Acceso Restringido
-            </div>
-            <p className="text-yellow-700">
-              No tienes permisos para acceder al módulo de auditoría.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
+  const getActionBadgeColor = (action: AccionAuditoria): string => {
+    if (action === AccionAuditoria.CREACION) return 'bg-green-100 text-green-800'
+    if (action === AccionAuditoria.MODIFICACION) return 'bg-blue-100 text-blue-800'
+    if (action === AccionAuditoria.ELIMINACION) return 'bg-red-100 text-red-800'
+    if (action === AccionAuditoria.APROBACION) return 'bg-purple-100 text-purple-800'
+    if (action === AccionAuditoria.DESCARGA) return 'bg-green-100 text-green-800'
+    if (action === AccionAuditoria.VISUALIZACION) return 'bg-gray-100 text-gray-800'
+    return 'bg-gray-100 text-gray-800'
+  }
+
+  // Determine what details to show based on user role
+  const getUserRole = () => {
+    // For now, return a default role since currentUser from Firebase Auth doesn't have custom claims
+    // This should be implemented when proper user management is in place
+    return 'ORG_ADMIN'
+  }
+
+  const shouldShowUserDetails = (record: RegistroAuditoria): boolean => {
+    const userRole = getUserRole()
+    
+    // SUPER_ADMIN sees everything
+    if (userRole === 'SUPER_ADMIN') return true
+    
+    // ORG_ADMIN and MANAGER see all details for their org
+    if (userRole === 'ORG_ADMIN' || userRole === 'MANAGER') return true
+    
+    // USER only sees their own details
+    if (userRole === 'USER') {
+      return record.usuarioId === currentUser?.uid
+    }
+    
+    return false
+  }
+
+  const shouldShowActionDetails = (record: RegistroAuditoria): boolean => {
+    const userRole = getUserRole()
+    
+    // SUPER_ADMIN sees everything
+    if (userRole === 'SUPER_ADMIN') return true
+    
+    // ORG_ADMIN and MANAGER see all action details
+    if (userRole === 'ORG_ADMIN' || userRole === 'MANAGER') return true
+    
+    // USER only sees limited details
+    return false
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="bg-white shadow">
+        <div className="px-4 py-5 sm:p-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-primary-100 p-2 rounded-lg">
-                <DocumentMagnifyingGlassIcon className="h-6 w-6 text-primary-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Auditoría del Sistema</h1>
-                <p className="text-gray-600">Registro completo de actividades y cambios</p>
+            <div className="flex items-center">
+              <ClockIcon className="h-8 w-8 text-indigo-600" />
+              <div className="ml-3">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Registro de Auditoría
+                </h1>
+                <p className="text-sm text-gray-500">
+                  Historial de actividades y cambios en el sistema
+                </p>
               </div>
             </div>
-            <button
-              onClick={handleExport}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-              Exportar
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar
-              </label>
-              <div className="relative">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar por usuario, acción..."
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Action Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Acción
-              </label>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as FilterType)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                {actionTypes.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Time Range */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Período
-              </label>
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                {timeRanges.map(range => (
-                  <option key={range.value} value={range.value}>
-                    {range.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Results Count */}
-            <div className="flex items-end">
-              <div className="text-sm text-gray-600">
-                Mostrando {filteredEntries.length} de {auditEntries.length} registros
+      {/* Statistics - Disabled for now */}
+      {false && !statsLoading && stats && (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <ChartBarIcon className="h-6 w-6 text-gray-400" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Total de Registros
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      0
+                    </dd>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Custom Date Range */}
-          {timeRange === 'custom' && (
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <ChartBarIcon className="h-6 w-6 text-green-400" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Registros Hoy
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      0
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <ChartBarIcon className="h-6 w-6 text-blue-400" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Esta Semana
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      0
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <ChartBarIcon className="h-6 w-6 text-purple-400" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Este Mes
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      0
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search and Filters */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Filtros de Búsqueda</h3>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <AdjustmentsHorizontalIcon className="h-4 w-4 mr-2" />
+              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+            </button>
+          </div>
+
+          {/* Search bar */}
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="flex-1 relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar en registros..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <button
+              onClick={handleApplyFilters}
+              className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Buscar
+            </button>
+          </div>
+
+          {/* Advanced filters */}
+          {showFilters && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha de inicio
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Acción
+                </label>
+                <select
+                  value={selectedAction}
+                  onChange={(e) => setSelectedAction(e.target.value as AccionAuditoria | '')}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="">Todas las acciones</option>
+                  {actions.map((action) => (
+                    <option key={action} value={action}>
+                      {getActionLabel(action)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ID de Contrato
                 </label>
                 <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  type="text"
+                  value={contratoId}
+                  onChange={(e) => setContratoId(e.target.value)}
+                  placeholder="ID del contrato"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha de fin
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ID de Usuario
+                </label>
+                <input
+                  type="text"
+                  value={usuarioId}
+                  onChange={(e) => setUsuarioId(e.target.value)}
+                  placeholder="ID del usuario"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fecha Inicio
                 </label>
                 <input
                   type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  value={fechaInicio}
+                  onChange={(e) => setFechaInicio(e.target.value)}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fecha Fin
+                </label>
+                <input
+                  type="date"
+                  value={fechaFin}
+                  onChange={(e) => setFechaFin(e.target.value)}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={clearFilters}
+                  className="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Limpiar Filtros
+                </button>
               </div>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Audit Log Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          {isLoading ? (
-            <div className="p-8 text-center">
-              <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4 animate-spin" />
-              <p className="text-gray-600">Cargando registros de auditoría...</p>
+      {/* Records List */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Registros de Auditoría
+            {totalRecords > 0 && (
+              <span className="ml-2 text-sm text-gray-500">
+                ({totalRecords} registros)
+              </span>
+            )}
+          </h3>
+
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             </div>
-          ) : filteredEntries.length === 0 ? (
-            <div className="p-8 text-center">
-              <DocumentMagnifyingGlassIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Sin registros de auditoría</h3>
-              <p className="text-gray-600 mb-4">
-                {auditEntries.length === 0 
-                  ? 'No hay registros de auditoría para mostrar'
-                  : 'No se encontraron registros que coincidan con los filtros aplicados'
-                }
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-600">{error}</p>
+            </div>
+          ) : records.length === 0 ? (
+            <div className="text-center py-8">
+              <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                No hay registros
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                No se encontraron registros de auditoría con los filtros aplicados.
               </p>
-              
-              {/* Coming Soon Features */}
-              <div className="mt-8 bg-gray-50 p-6 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Próximas Funcionalidades</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
-                  <div>• Registro automático de actividades</div>
-                  <div>• Filtros avanzados por usuario</div>
-                  <div>• Exportación a Excel/PDF</div>
-                  <div>• Alertas de actividad sospechosa</div>
-                  <div>• Retención configurable de logs</div>
-                  <div>• Dashboard de métricas de auditoría</div>
-                </div>
-              </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha y Hora
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Usuario
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Acción
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Recurso
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Detalles
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredEntries.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatTimestamp(entry.timestamp)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <UserIcon className="h-4 w-4 text-gray-400 mr-2" />
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {entry.userName}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {entry.userEmail}
-                            </div>
-                          </div>
+            <div className="space-y-4">
+              {records.map((record) => (
+                <div
+                  key={record.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getActionBadgeColor(record.accion)}`}
+                      >
+                        {getActionLabel(record.accion)}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {formatDateTime(record.fecha)}
+                      </span>
+                    </div>
+                    {shouldShowUserDetails(record) && (
+                      <span className="text-sm text-gray-500">
+                        Usuario: {record.usuarioId}
+                      </span>
+                    )}
+                  </div>
+
+                  {record.descripcion && (
+                    <p className="mt-2 text-sm text-gray-700">
+                      {record.descripcion}
+                    </p>
+                  )}
+
+                  {shouldShowActionDetails(record) && (
+                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3 text-xs text-gray-500">
+                      {record.contratoId && (
+                        <div>
+                          <span className="font-medium">Contrato:</span> {record.contratoId}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getActionColor(entry.action)}`}>
-                          {entry.action}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {entry.resource}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                        {JSON.stringify(entry.details)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      )}
+                      {record.metadatos?.proyectoId && (
+                        <div>
+                          <span className="font-medium">Proyecto:</span> {record.metadatos.proyectoId}
+                        </div>
+                      )}
+                      {record.metadatos?.contraparteId && (
+                        <div>
+                          <span className="font-medium">Contraparte:</span> {record.metadatos.contraparteId}
+                        </div>
+                      )}
+                      {record.ipAddress && (
+                        <div>
+                          <span className="font-medium">IP:</span> {record.ipAddress}
+                        </div>
+                      )}
+                      {record.userAgent && (
+                        <div className="sm:col-span-3">
+                          <span className="font-medium">User Agent:</span> {record.userAgent}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                Página {currentPage} de {totalPages}
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={prevPage}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={nextPage}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           )}
         </div>

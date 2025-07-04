@@ -12,15 +12,22 @@ console.log('STORAGE_BUCKET:', import.meta.env.VITE_STORAGE_BUCKET ? '✅ Set' :
 console.log('MESSAGING_SENDER_ID:', import.meta.env.VITE_MESSAGING_SENDER_ID ? '✅ Set' : '❌ Missing')
 console.log('APP_ID:', import.meta.env.VITE_APP_ID ? '✅ Set' : '❌ Missing')
 
-// Production-ready configuration with proper fallbacks
+// Production-ready configuration with environment variables only
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_API_KEY || "AIzaSyDAg1XbyB55RDNEQGkYDnot7epo94tadhA",
-  authDomain: import.meta.env.VITE_AUTH_DOMAIN || "pullmai-e0bb0.firebaseapp.com",
-  projectId: import.meta.env.VITE_PROJECT_ID || "pullmai-e0bb0",
-  storageBucket: import.meta.env.VITE_STORAGE_BUCKET || "pullmai-e0bb0.appspot.com",
-  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID || "14877592509",
-  appId: import.meta.env.VITE_APP_ID || "1:14877592509:web:5ad44fb6413d0e5f9ae0d4",
+  apiKey: import.meta.env.VITE_API_KEY,
+  authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_APP_ID,
   measurementId: import.meta.env.VITE_MEASUREMENT_ID,
+}
+
+// Validate required Firebase configuration
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error('❌ Firebase configuration error: Missing required environment variables!')
+  console.error('Please ensure your .env file contains all required VITE_* variables.')
+  console.error('Check .env.template for the complete list of required variables.')
 }
 
 // Validate critical configuration

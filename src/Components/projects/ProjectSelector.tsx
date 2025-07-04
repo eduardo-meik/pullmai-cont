@@ -43,7 +43,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   selectedProjectId,
   title = "Seleccionar Proyecto",
   allowCreate = true
-}) => {  const { proyectos, loading, error } = useProjects()
+}) => {  const { data: proyectos, isLoading: loading, error } = useProjects()
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newProjectForm, setNewProjectForm] = useState<NewProjectForm>({

@@ -1,12 +1,23 @@
 const admin = require("firebase-admin");
+require('dotenv').config();
 
-// IMPORTANT: Make sure you have downloaded your service account key and placed it in the root
-// Also, ensure you have run 'npm install firebase-admin'
-const serviceAccount = require("./pullmai-e0bb0-firebase-adminsdk-6nr9p-f6c7ab0040.json");
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+// Firebase Admin configuration - SECURE VERSION
+// Use environment variables instead of hardcoded service account file
+if (!admin.apps.length) {
+  if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.VITE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+      })
+    });
+  } else {
+    console.error('❌ Missing Firebase Admin SDK environment variables!');
+    console.error('Please set FIREBASE_PRIVATE_KEY and FIREBASE_CLIENT_EMAIL in your .env file');
+    process.exit(1);
+  }
+}
 
 // --- CONFIGURATION ---
 // Replace this with the UID of the user you want to grant privileges to.

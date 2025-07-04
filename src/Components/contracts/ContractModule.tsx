@@ -12,6 +12,7 @@ import ContractCalendar from './ContractCalendar'
 import ContractForm from './ContractForm'
 import { motion } from 'framer-motion'
 import usePermissions from '../../hooks/usePermissions'
+import { useCacheInvalidation } from '../../hooks/useCacheInvalidation'
 
 type ViewType = 'table' | 'gantt' | 'calendar'
 
@@ -19,6 +20,7 @@ const ContractModule: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewType>('table')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const { canCreateContract, userOrganizationId, isLoggedIn } = usePermissions()
+  const { invalidateContracts } = useCacheInvalidation()
 
   const views = [
     {
@@ -115,7 +117,8 @@ const ContractModule: React.FC = () => {
           onClose={() => setShowCreateForm(false)}
           onSuccess={() => {
             setShowCreateForm(false)
-            // Refresh data logic would go here
+            // Invalidate contracts cache to refresh the views
+            invalidateContracts()
           }}
         />
       )}

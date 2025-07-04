@@ -127,6 +127,15 @@ export class ContractService {
     usuarioId: string
   ): Promise<string> {
     try {
+      console.log('Creating contract with:', { organizacionId, usuarioId })
+      
+      // Check if user is authenticated
+      const { currentUser } = await import('../firebase').then(m => ({ currentUser: m.auth.currentUser }))
+      if (!currentUser) {
+        throw new Error('Usuario no autenticado')
+      }
+      console.log('User authenticated:', currentUser.uid)
+      
       const batch = writeBatch(db)
       
       // Subir documento si existe
@@ -136,13 +145,27 @@ export class ContractService {
 
       if (formulario.documento) {        console.log('Uploading document:', formulario.documento.name, 'for organization:', organizacionId)
         
-        // Use the organization ID directly (Firebase Storage handles spaces in paths)
-        const documentoPath = `contracts/${organizacionId}/contract_${Date.now()}`
+        // Validate file size (limit to 10MB)
+        const maxSize = 10 * 1024 * 1024 // 10MB
+        if (formulario.documento.size > maxSize) {
+          throw new Error(`El archivo es demasiado grande. Tamaño máximo permitido: 10MB`)
+        }
+        
+        // Use organization ID with safe encoding for path
+        const safeOrgId = organizacionId?.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '_') || 'default_org'
+        const documentoPath = `contracts/${safeOrgId}/contract_${Date.now()}`
         console.log('Upload path:', documentoPath)
         
         const documentoRef = ref(storage, documentoPath)
         
         try {
+          console.log('Upload attempt details:', {
+            originalOrgId: organizacionId,
+            safeOrgId,
+            path: documentoPath,
+            fileSize: formulario.documento.size,
+            fileType: formulario.documento.type
+          })
           await uploadBytes(documentoRef, formulario.documento)
           // Store the relative path instead of the full download URL
           pdfUrl = documentoPath 

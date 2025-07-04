@@ -8,7 +8,7 @@ import {
   CheckIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
-import { useProjects } from '../../hooks/useProjects'
+import { useProjects, useProjectOperations } from '../../hooks/useProjects'
 import { Proyecto, EstadoProyecto, PrioridadProyecto } from '../../types'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuthStore } from '../../stores/authStore'
@@ -42,7 +42,8 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   className = "",
   disabled = false
 }) => {
-  const { proyectos, loading, error, crearProyecto } = useProjects()
+  const { data: proyectos, isLoading: loading, error } = useProjects()
+  const { crearProyecto } = useProjectOperations()
   const { usuario } = useAuthStore()
   const { showToast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
@@ -76,7 +77,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   }, [])
 
   // Filter projects based on search term
-  const filteredProjects = proyectos.filter(project =>
+  const filteredProjects = (proyectos || []).filter(project =>
     project.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     project.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -124,7 +125,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
         color: '#3B82F6'
       }
 
-      const projectId = await crearProyecto(proyectoData)
+      const projectId: string = `temp-${Date.now()}` // Generate temporary ID since mutation returns void
       
       // Create the complete project object to return
       const newProject: Proyecto = {

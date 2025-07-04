@@ -9,7 +9,7 @@ import {
   PlayIcon
 } from '@heroicons/react/24/outline'
 import { useContracts } from '../../hooks/useContracts'
-import { useProjectStats } from '../../hooks/useProjects'
+import { useProjectsResumen } from '../../hooks/useProjects'
 
 interface StatCardProps {
   title: string
@@ -65,7 +65,7 @@ const StatCard: React.FC<StatCardProps> = ({
 
 const DashboardStats: React.FC = () => {
   const contractsQuery = useContracts()
-  const { resumen: projectStats, loading: projectsLoading } = useProjectStats()
+  const { data: projectStats, isLoading: projectsLoading } = useProjectsResumen()
 
   const contratos = contractsQuery.data?.contratos || []
   const contractsLoading = contractsQuery.isLoading
@@ -142,16 +142,16 @@ const DashboardStats: React.FC = () => {
     },
     {
       title: 'Total Proyectos',
-      value: projectStats.totalProyectos,
-      change: `${projectStats.proyectosActivos} activos`,
+      value: projectStats?.totalProyectos || 0,
+      change: `${projectStats?.proyectosActivos || 0} activos`,
       changeType: 'neutral' as const,
       icon: <FolderIcon className="h-6 w-6 text-indigo-600" />,
       color: 'bg-indigo-100'
     },
     {
       title: 'Proyectos Activos',
-      value: projectStats.proyectosActivos,
-      change: `${projectStats.proyectosCompletados} completados`,
+      value: projectStats?.proyectosActivos || 0,
+      change: `${projectStats?.proyectosCompletados || 0} completados`,
       changeType: 'increase' as const,
       icon: <PlayIcon className="h-6 w-6 text-emerald-600" />,
       color: 'bg-emerald-100'

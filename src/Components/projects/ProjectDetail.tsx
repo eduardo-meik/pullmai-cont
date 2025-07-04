@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useProject, useProjects } from '../../hooks/useProjects'
+import { useProject, useProjectContracts, useProjectStats, useProjectOperations } from '../../hooks/useProjects'
 import { useDeleteContract, useUnlinkContractFromProject } from '../../hooks/useContracts'
 import { EstadoProyecto, PrioridadProyecto, EstadoContrato, CategoriaContrato, Periodicidad, TipoEconomico, Contrato } from '../../types'
 import LoadingSpinner from '../ui/LoadingSpinner'
@@ -14,13 +14,16 @@ import { useMutation } from '@tanstack/react-query'
 import { contractService } from '../../services/contractService'
 import { ProjectService } from '../../services/projectService'
 import { useAuth } from '../../contexts/AuthContext'
-import { ContratoYaVinculadoError } from '../../services/contractService'
+import { useCacheInvalidation } from '../../hooks/useCacheInvalidation'
 
 const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { proyecto, contratos, estadisticas, loading, error, refetch } = useProject(id!)
-  const { eliminarProyecto } = useProjects()
+  const { data: proyecto, isLoading: loading, error } = useProject(id!)
+  const { data: contratos } = useProjectContracts(proyecto?.nombre || '')
+  const { data: estadisticas } = useProjectStats(proyecto?.nombre || '')
+  const { eliminarProyecto } = useProjectOperations()
+  const { invalidateProjects, invalidateProject } = useCacheInvalidation()
   const unlinkContractMutation = useUnlinkContractFromProject()
   const { showToast } = useToast()
   const { currentUser } = useAuth()
@@ -40,7 +43,8 @@ const ProjectDetail: React.FC = () => {
       }, currentUser?.uid || '')
     },
     onSuccess: async () => {
-      await refetch()
+      invalidateProject(id!)
+      invalidateProjects()
       setShowContractSelect(false)
       showToast('Contrato agregado al proyecto', 'success')
     },
@@ -58,7 +62,8 @@ const ProjectDetail: React.FC = () => {
       await ProjectService.actualizarProyecto(proyecto.id, projectData)
     },
     onSuccess: async () => {
-      await refetch()
+      invalidateProject(id!)
+      invalidateProjects()
       setShowEditForm(false)
       showToast('Proyecto actualizado exitosamente', 'success')
     },
@@ -101,7 +106,8 @@ const ProjectDetail: React.FC = () => {
   }
   const handleCreateContract = () => {
     setShowContractForm(false)
-    refetch() // Refresh the project data to show the new contract
+    invalidateProject(id!) // Refresh the project data to show the new contract
+    invalidateProjects()
   }
 
   const handleViewContract = (contrato: Contrato) => {
@@ -117,13 +123,15 @@ const ProjectDetail: React.FC = () => {
   const handleContractEditSuccess = () => {
     setShowContractEdit(false)
     setSelectedContract(null)
-    refetch() // Refresh the project data to show the updated contract
+    invalidateProject(id!) // Refresh the project data to show the updated contract
+    invalidateProjects()
   }
 
   const handleDeleteContract = async (contractId: string) => {
     try {
       await unlinkContractMutation.mutateAsync(contractId)
-      await refetch() // Refresh project/contracts after unlink
+      invalidateProject(id!) // Refresh project/contracts after unlink
+      invalidateProjects()
     } catch (error) {
       console.error('Error desvinculando contrato del proyecto:', error)
       // Error toast will be shown by the hook automatically
@@ -145,7 +153,9 @@ const ProjectDetail: React.FC = () => {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <div className="text-red-800 font-medium">Error cargando proyecto</div>
-        <div className="text-red-600 text-sm mt-1">{error || 'Proyecto no encontrado'}</div>
+        <div className="text-red-600 text-sm mt-1">
+          {error instanceof Error ? error.message : 'Proyecto no encontrado'}
+        </div>
       </div>
     )
   }
@@ -363,12 +373,12 @@ const ProjectDetail: React.FC = () => {
         </div>
 
         <div className="mt-4">
-          {contratos.length === 0 ? (
+          {(contratos?.length || 0) === 0 ? (
             <div className="text-center text-gray-500 py-4">
               No hay contratos asociados a este proyecto.
             </div>
           ) : (            <div className="space-y-4">
-              {contratos.map((contrato) => (
+              {contratos?.map((contrato: Contrato) => (
                 <ContractCard
                   key={contrato.id}
                   contrato={contrato}

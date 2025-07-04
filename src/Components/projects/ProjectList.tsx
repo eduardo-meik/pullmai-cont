@@ -1,13 +1,14 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useProjects } from '../../hooks/useProjects'
+import { useProjects, useProjectOperations } from '../../hooks/useProjects'
 import { EstadoProyecto, PrioridadProyecto } from '../../types'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import ProjectForm from './ProjectForm'
 import { useToast } from '../../contexts/ToastContext'
 
 const ProjectList: React.FC = () => {
-  const { proyectos, loading, error, crearProyecto } = useProjects()
+  const { data: proyectos, isLoading: loading, error } = useProjects()
+  const { crearProyecto } = useProjectOperations()
   const { showToast } = useToast()
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -40,7 +41,9 @@ const ProjectList: React.FC = () => {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <div className="text-red-800 font-medium">Error cargando proyectos</div>
-        <div className="text-red-600 text-sm mt-1">{error}</div>
+        <div className="text-red-600 text-sm mt-1">
+          {error instanceof Error ? error.message : 'Error desconocido'}
+        </div>
       </div>
     )
   }
@@ -109,7 +112,7 @@ const ProjectList: React.FC = () => {
 
       {/* Grid de proyectos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {proyectos.map((proyecto) => {
+        {proyectos?.map((proyecto) => {
           const progreso = calcularProgreso(proyecto.presupuestoGastado, proyecto.presupuestoTotal)
           
           return (
@@ -219,7 +222,7 @@ const ProjectList: React.FC = () => {
       </div>
 
       {/* Estado vacío */}
-      {proyectos.length === 0 && (
+      {(proyectos?.length === 0) && (
         <div className="text-center py-12">
           <div className="text-gray-400 text-6xl mb-4">📋</div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">

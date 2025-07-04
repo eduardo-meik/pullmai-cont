@@ -11,7 +11,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import { useAuthStore } from '../../stores/authStore'
 import { Usuario, UserRole } from '../../types'
-import { useUsers } from '../../hooks/useUsers'
+import { useUsers, useUserOperations } from '../../hooks/useUsers'
 
 type ViewMode = 'table' | 'cards'
 
@@ -22,6 +22,7 @@ const UserModule: React.FC = () => {
   const { currentUser } = useAuth()
   const { usuario } = useAuthStore()
   const { users, isLoading, error, refetchUsers } = useUsers()
+  const { updateUser, isUpdating, invalidateUsersCache } = useUserOperations()
 
   const canManageUsers = usuario?.rol === UserRole.ORG_ADMIN || usuario?.rol === UserRole.SUPER_ADMIN
 
@@ -31,6 +32,18 @@ const UserModule: React.FC = () => {
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.organizacionId?.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const handleToggleUserStatus = async (user: Usuario) => {
+    try {
+      await updateUser({
+        userId: user.id!,
+        userData: { activo: !user.activo }
+      })
+      // Cache will be automatically invalidated by the mutation
+    } catch (error) {
+      console.error('Error updating user status:', error)
+    }
+  }
 
   if (!canManageUsers) {
     return (
@@ -241,11 +254,18 @@ const UserModule: React.FC = () => {
                         }
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-primary-600 hover:text-primary-900 mr-3">
+                        <button 
+                          className="text-primary-600 hover:text-primary-900 mr-3"
+                          onClick={() => {/* TODO: Implement edit user modal */}}
+                        >
                           Editar
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
-                          Desactivar
+                        <button 
+                          className="text-red-600 hover:text-red-900"
+                          onClick={() => handleToggleUserStatus(user)}
+                          disabled={isUpdating}
+                        >
+                          {user.activo !== false ? 'Desactivar' : 'Activar'}
                         </button>
                       </td>
                     </tr>

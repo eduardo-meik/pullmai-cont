@@ -1,12 +1,29 @@
 const admin = require('firebase-admin');
+require('dotenv').config();
 
-// Initialize Firebase Admin
-const serviceAccount = require('./pullmai-e0bb0-firebase-adminsdk-6nr9p-f6c7ab0040.json');
+// Firebase Admin configuration - SECURE VERSION  
+// Use environment variables instead of hardcoded service account file
+let adminApp;
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: 'pullmai-e0bb0.appspot.com'
-});
+if (!admin.apps.length) {
+  // Check if we have service account environment variables
+  if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+    adminApp = admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.VITE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+      }),
+      storageBucket: process.env.VITE_STORAGE_BUCKET
+    });
+  } else {
+    console.error('❌ Missing Firebase Admin SDK environment variables!');
+    console.error('Please set FIREBASE_PRIVATE_KEY and FIREBASE_CLIENT_EMAIL in your .env file');
+    process.exit(1);
+  }
+} else {
+  adminApp = admin.app();
+}
 
 const db = admin.firestore();
 const bucket = admin.storage().bucket();

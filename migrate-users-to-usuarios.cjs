@@ -9,15 +9,25 @@ import {
   writeBatch
 } from 'firebase/firestore'
 
-// Firebase configuration
+// Firebase configuration - SECURE VERSION
+// Use environment variables instead of hardcoded keys
+import 'dotenv/config'
+
 const firebaseConfig = {
-  apiKey: "AIzaSyD3ztV7FhKaLT6bFexZP0s72z_YGe9W5aY",
-  authDomain: "pullmai-8a5a9.firebaseapp.com",
-  projectId: "pullmai-8a5a9",
-  storageBucket: "pullmai-8a5a9.appspot.com",
-  messagingSenderId: "664875001625",
-  appId: "1:664875001625:web:3739066d74e6e8c71e5aaf",
-  measurementId: "G-22B44K50EP"
+  apiKey: process.env.VITE_API_KEY,
+  authDomain: process.env.VITE_AUTH_DOMAIN,
+  projectId: process.env.VITE_PROJECT_ID,
+  storageBucket: process.env.VITE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_APP_ID,
+  measurementId: process.env.VITE_MEASUREMENT_ID
+}
+
+// Validate that required environment variables are present
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error('❌ Missing required Firebase environment variables!')
+  console.error('Please ensure .env file contains VITE_API_KEY and VITE_PROJECT_ID')
+  process.exit(1)
 }
 
 // Initialize Firebase

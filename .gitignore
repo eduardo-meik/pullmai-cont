@@ -30,6 +30,17 @@ dist-ssr
 .env.test.local
 .env.production.local
 .env.staging
+.env.production
+
+# SECURITY: Never commit any file with actual API keys
+**/firebase-config.js
+**/firebase-config.ts
+migrate-*.js
+migrate-*.cjs
+delete-*.js  
+delete-*.cjs
+verify-*.js
+verify-*.cjs
 
 # Firebase and Google Cloud credentials
 pullmai-e0bb0-firebase-adminsdk-6nr9p-f6c7ab0040.json

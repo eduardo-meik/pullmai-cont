@@ -13,6 +13,7 @@ import {
   LinkIcon
 } from '@heroicons/react/24/outline'
 import { useContracts, useDeleteContract } from '../../hooks/useContracts'
+import { useCacheInvalidation } from '../../hooks/useCacheInvalidation'
 import { Contrato, FormularioContrato, Proyecto } from '../../types'
 import ContractForm from './ContractForm'
 import ContractPDFViewer from './ContractPDFViewer'
@@ -31,6 +32,7 @@ interface SortConfig {
 const ContractTable: React.FC = () => {
   const { data, isLoading } = useContracts()
   const deleteContractMutation = useDeleteContract() // Reactivated delete functionality
+  const { invalidateContracts } = useCacheInvalidation()
   const [editingContract, setEditingContract] = useState<Contrato | null>(null)
   const [viewingPDF, setViewingPDF] = useState<{ url: string; title: string } | null>(null)
   const [viewingContractDetail, setViewingContractDetail] = useState<Contrato | null>(null)
@@ -670,7 +672,8 @@ const ContractTable: React.FC = () => {
           contractToEdit={convertToFormulario(editingContract)}
           onSuccess={() => {
             setEditingContract(null)
-            // Refresh logic would go here
+            // Invalidate contracts cache to refresh the table
+            invalidateContracts()
           }}
         />
       )}      {/* PDF Viewer Modal */}

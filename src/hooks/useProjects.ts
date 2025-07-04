@@ -1,175 +1,139 @@
-import { useState, useEffect } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { Proyecto, EstadisticasProyecto, Contrato } from '../types'
 import ProjectService from '../services/projectService'
+import { CACHE_KEYS, useCacheInvalidation } from './useCacheInvalidation'
+import { useAuthStore } from '../stores/authStore'
+import { useToast } from '../contexts/ToastContext'
 
 // Hook para gestionar proyectos
 export const useProjects = (organizacionId?: string) => {
-  const [proyectos, setProyectos] = useState<Proyecto[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { usuario } = useAuthStore()
+  const orgId = organizacionId || usuario?.organizacionId
 
-  useEffect(() => {
-    cargarProyectos()
-  }, [organizacionId])
-
-  const cargarProyectos = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const data = organizacionId 
-        ? await ProjectService.obtenerProyectosPorOrganizacion(organizacionId)
+  return useQuery({
+    queryKey: [CACHE_KEYS.PROJECTS, orgId],
+    queryFn: async () => {
+      const data = orgId 
+        ? await ProjectService.obtenerProyectosPorOrganizacion(orgId)
         : await ProjectService.obtenerProyectos()
       
-      setProyectos(data)
-    } catch (err) {
-      setError('Error cargando proyectos')
-      console.error('Error cargando proyectos:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
+      return data
+    },
+    enabled: !!orgId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: true,
+    refetchOnMount: false
+  })
+}
 
-  const crearProyecto = async (proyecto: Omit<Proyecto, 'id' | 'fechaCreacion' | 'fechaUltimaModificacion' | 'version'>) => {
-    try {
-      const id = await ProjectService.crearProyecto(proyecto)
-      if (id) {
-        await cargarProyectos() // Recargar lista
-        return id
-      }
-      throw new Error('No se pudo crear el proyecto')
-    } catch (err) {
-      setError('Error creando proyecto')
-      throw err
-    }
-  }
+// Hook para operaciones de proyectos con invalidación de caché
+export const useProjectOperations = () => {
+  const { invalidateProjects, invalidateProject, invalidateOrganizationData } = useCacheInvalidation()
+  const { usuario } = useAuthStore()
+  const { showTypedToast } = useToast()
 
-  const actualizarProyecto = async (id: string, cambios: Partial<Proyecto>) => {
-    try {
-      const success = await ProjectService.actualizarProyecto(id, cambios)
-      if (success) {
-        await cargarProyectos() // Recargar lista
-        return true
+  const crearProyectoMutation = useMutation({
+    mutationFn: (proyecto: Omit<Proyecto, 'id' | 'fechaCreacion' | 'fechaUltimaModificacion' | 'version'>) => 
+      ProjectService.crearProyecto(proyecto),
+    onSuccess: (id) => {
+      if (usuario?.organizacionId) {
+        invalidateProjects(usuario.organizacionId)
+        invalidateOrganizationData(usuario.organizacionId)
       }
-      throw new Error('No se pudo actualizar el proyecto')
-    } catch (err) {
-      setError('Error actualizando proyecto')
-      throw err
+      showTypedToast('success', 'Proyecto creado exitosamente')
+      return id
+    },
+    onError: (error) => {
+      showTypedToast('error', 'Error creando proyecto')
+      throw error
     }
-  }
+  })
 
-  const eliminarProyecto = async (id: string) => {
-    try {
-      const success = await ProjectService.eliminarProyecto(id)
-      if (success) {
-        await cargarProyectos() // Recargar lista
-        return true
+  const actualizarProyectoMutation = useMutation({
+    mutationFn: ({ id, cambios }: { id: string; cambios: Partial<Proyecto> }) => 
+      ProjectService.actualizarProyecto(id, cambios),
+    onSuccess: (_, { id }) => {
+      invalidateProject(id)
+      if (usuario?.organizacionId) {
+        invalidateProjects(usuario.organizacionId)
       }
-      throw new Error('No se pudo eliminar el proyecto')
-    } catch (err) {
-      setError('Error eliminando proyecto')
-      throw err
+      showTypedToast('success', 'Proyecto actualizado exitosamente')
+    },
+    onError: () => {
+      showTypedToast('error', 'Error actualizando proyecto')
     }
-  }
+  })
+
+  const eliminarProyectoMutation = useMutation({
+    mutationFn: (id: string) => ProjectService.eliminarProyecto(id),
+    onSuccess: () => {
+      if (usuario?.organizacionId) {
+        invalidateProjects(usuario.organizacionId)
+        invalidateOrganizationData(usuario.organizacionId)
+      }
+      showTypedToast('success', 'Proyecto eliminado exitosamente')
+    },
+    onError: () => {
+      showTypedToast('error', 'Error eliminando proyecto')
+    }
+  })
+
   return {
-    proyectos,
-    loading,
-    error,
-    cargarProyectos,
-    refetchProjects: cargarProyectos, // Alias for cargarProyectos
-    crearProyecto,
-    actualizarProyecto,
-    eliminarProyecto
+    crearProyecto: crearProyectoMutation.mutate,
+    actualizarProyecto: actualizarProyectoMutation.mutate,
+    eliminarProyecto: eliminarProyectoMutation.mutate,
+    isCreating: crearProyectoMutation.isPending,
+    isUpdating: actualizarProyectoMutation.isPending,
+    isDeleting: eliminarProyectoMutation.isPending
   }
 }
 
 // Hook para obtener un proyecto específico
 export const useProject = (id: string) => {
-  const [proyecto, setProyecto] = useState<Proyecto | null>(null)
-  const [contratos, setContratos] = useState<Contrato[]>([])
-  const [estadisticas, setEstadisticas] = useState<EstadisticasProyecto | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (id) {
-      cargarProyecto()
-    }
-  }, [id])
-
-  const cargarProyecto = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Cargar proyecto
-      const proyectoData = await ProjectService.obtenerProyectoPorId(id)
-      if (!proyectoData) {
+  return useQuery({
+    queryKey: [CACHE_KEYS.PROJECT, id],
+    queryFn: async () => {
+      const proyecto = await ProjectService.obtenerProyectoPorId(id)
+      if (!proyecto) {
         throw new Error('Proyecto no encontrado')
       }
-      setProyecto(proyectoData)
-
-      // Cargar contratos del proyecto
-      const contratosData = await ProjectService.obtenerContratosPorProyecto(proyectoData.nombre)
-      setContratos(contratosData)
-
-      // Cargar estadísticas
-      const estadisticasData = await ProjectService.calcularEstadisticasProyecto(proyectoData.nombre)
-      setEstadisticas(estadisticasData)
-
-    } catch (err) {
-      setError('Error cargando proyecto')
-      console.error('Error cargando proyecto:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return {
-    proyecto,
-    contratos,
-    estadisticas,
-    loading,
-    error,
-    refetch: cargarProyecto, // Expose for manual refresh
-  }
+      return proyecto
+    },
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000
+  })
 }
 
-// Hook para estadísticas generales de proyectos
-export const useProjectStats = () => {
-  const [resumen, setResumen] = useState({
-    totalProyectos: 0,
-    proyectosActivos: 0,
-    proyectosCompletados: 0,
-    valorTotalProyectos: 0,
-    proyectosPorEstado: {} as Record<string, number>
+// Hook para obtener contratos de un proyecto
+export const useProjectContracts = (projectName: string) => {
+  return useQuery({
+    queryKey: [CACHE_KEYS.CONTRACTS, 'project', projectName],
+    queryFn: () => ProjectService.obtenerContratosPorProyecto(projectName),
+    enabled: !!projectName,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000
   })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+}
 
-  useEffect(() => {
-    cargarResumen()
-  }, [])
+// Hook para estadísticas de un proyecto
+export const useProjectStats = (projectName: string) => {
+  return useQuery({
+    queryKey: [CACHE_KEYS.PROJECT, 'stats', projectName],
+    queryFn: () => ProjectService.calcularEstadisticasProyecto(projectName),
+    enabled: !!projectName,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000
+  })
+}
 
-  const cargarResumen = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const data = await ProjectService.obtenerResumenProyectos()
-      setResumen(data)
-    } catch (err) {
-      setError('Error cargando estadísticas')
-      console.error('Error cargando estadísticas de proyectos:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return {
-    resumen,
-    loading,
-    error,
-    recargar: cargarResumen
-  }
+// Hook para resumen general de proyectos
+export const useProjectsResumen = () => {
+  return useQuery({
+    queryKey: [CACHE_KEYS.PROJECTS, 'resumen'],
+    queryFn: () => ProjectService.obtenerResumenProyectos(),
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000
+  })
 }
