@@ -32,31 +32,9 @@ export function useFirstTimeWizard() {
                                 usuario.rol
 
       // Check if user account seems established (has been created more than a day ago)
-      const userCreationTime = usuario.fechaCreacion
-      let isEstablishedUser = false
-      
-      if (userCreationTime) {
-        let creationDate: Date
-        
-        // Handle different date formats (Firestore Timestamp, Date object, etc.)
-        if (userCreationTime instanceof Date) {
-          creationDate = userCreationTime
-        } else if (userCreationTime && typeof userCreationTime === 'object' && 'toDate' in userCreationTime) {
-          // Firestore Timestamp
-          creationDate = (userCreationTime as any).toDate()
-        } else if (userCreationTime && typeof userCreationTime === 'object' && 'seconds' in userCreationTime) {
-          // Firestore Timestamp with seconds
-          creationDate = new Date((userCreationTime as any).seconds * 1000)
-        } else if (typeof userCreationTime === 'string' || typeof userCreationTime === 'number') {
-          // String or number timestamp
-          creationDate = new Date(userCreationTime)
-        } else {
-          // Fallback to current date if format is unknown
-          creationDate = new Date()
-        }
-        
-        isEstablishedUser = (Date.now() - creationDate.getTime()) > 24 * 60 * 60 * 1000 // 24 hours
-      }
+      const isEstablishedUser = usuario.fechaCreacion 
+        ? isDateOlderThan(usuario.fechaCreacion, 24 * 60 * 60 * 1000) // 24 hours
+        : false
       
       // Show wizard only for truly new users who need onboarding
       const shouldShowWizard = !wizardCompleted && 

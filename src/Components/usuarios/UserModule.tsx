@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useAuthStore } from '../../stores/authStore'
 import { Usuario, UserRole } from '../../types'
 import { useUsers, useUserOperations } from '../../hooks/useUsers'
+import { formatDate } from '../../utils/dateUtils'
 
 type ViewMode = 'table' | 'cards'
 
@@ -238,20 +239,7 @@ const UserModule: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.ultimoAcceso 
-                          ? (() => {
-                              const fecha = user.ultimoAcceso
-                              if (fecha instanceof Date) {
-                                return fecha.toLocaleDateString()
-                              } else if (fecha && typeof fecha === 'object' && 'toDate' in fecha) {
-                                return (fecha as any).toDate().toLocaleDateString()
-                              } else if (fecha && typeof fecha === 'object' && 'seconds' in fecha) {
-                                return new Date((fecha as any).seconds * 1000).toLocaleDateString()
-                              }
-                              return 'Fecha inválida'
-                            })()
-                          : 'Nunca'
-                        }
+                        {formatDate(user.ultimoAcceso)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button 

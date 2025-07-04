@@ -36,8 +36,12 @@ export const formatDateTime = (date: Date | { seconds: number } | string): strin
 /**
  * Formats a date for display (no time)
  */
-export const formatDate = (date: Date | { seconds: number } | string): string => {
+export const formatDate = (date: Date | { seconds: number } | string | null | undefined): string => {
   try {
+    if (!date) {
+      return 'Nunca'
+    }
+    
     let actualDate: Date
     
     if (typeof date === 'string') {
@@ -47,6 +51,9 @@ export const formatDate = (date: Date | { seconds: number } | string): string =>
     } else if (date && typeof date === 'object' && 'seconds' in date) {
       // Firestore Timestamp
       actualDate = new Date(date.seconds * 1000)
+    } else if (date && typeof date === 'object' && 'toDate' in date && typeof (date as any).toDate === 'function') {
+      // Firestore Timestamp with toDate method
+      actualDate = (date as any).toDate()
     } else {
       return 'Fecha inválida'
     }
@@ -75,21 +82,36 @@ export const convertToDate = (date: any): Date => {
     }
 
     if (date instanceof Date) {
+      // Check if it's a valid date
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid Date object provided:', date)
+        return new Date()
+      }
       return date
     }
 
     if (date && typeof date === 'object' && 'toDate' in date && typeof date.toDate === 'function') {
-      return date.toDate()
+      const converted = date.toDate()
+      if (converted instanceof Date && !isNaN(converted.getTime())) {
+        return converted
+      }
     }
 
     if (date && typeof date === 'object' && 'seconds' in date) {
-      return new Date(date.seconds * 1000)
+      const converted = new Date(date.seconds * 1000)
+      if (!isNaN(converted.getTime())) {
+        return converted
+      }
     }
 
     if (typeof date === 'string' || typeof date === 'number') {
-      return new Date(date)
+      const converted = new Date(date)
+      if (!isNaN(converted.getTime())) {
+        return converted
+      }
     }
 
+    console.warn('Unable to convert to valid date:', date, typeof date)
     return new Date()
   } catch (error) {
     console.warn('Error converting date:', date, error)
@@ -107,6 +129,13 @@ export const isDateOlderThan = (dateValue: any, milliseconds: number): boolean =
     }
 
     const date = convertToDate(dateValue)
+    
+    // Additional safety check to ensure we have a valid date
+    if (!date || isNaN(date.getTime())) {
+      console.warn('Invalid date in isDateOlderThan:', dateValue)
+      return false
+    }
+    
     return (Date.now() - date.getTime()) > milliseconds
   } catch (error) {
     console.warn('Error checking date age:', dateValue, error)
