@@ -10,6 +10,7 @@ import {
   Cog6ToothIcon
 } from '@heroicons/react/24/outline'
 import ContraparteTable from './ContraparteTable'
+import ContraparteTableSkeleton from './ContraparteTableSkeleton'
 import OrganizacionModal from './OrganizacionModal'
 import ContraparteDetailedView from './ContraparteDetailedView'
 import ContractImportModal from './ContractImportModal'
@@ -240,10 +241,7 @@ const ContraparteModule: React.FC = () => {
 
           {/* Loading State */}
           {isLoading && (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Cargando contrapartes...</p>
-            </div>
+            <ContraparteTableSkeleton />
           )}
 
           {/* Empty State */}

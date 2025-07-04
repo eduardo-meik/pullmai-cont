@@ -45,13 +45,15 @@ export class ContraparteOrganizacionService {
   
   /**
    * Obtiene todas las organizaciones que son contrapartes de una organización específica
+   * Optimized version to reduce database calls
    */
   static async getContrapartes(organizacionId: string): Promise<ContraparteRelacion[]> {
     try {
       // 1. Obtener todos los contratos de la organización
       const contractsQuery = query(
         collection(db, 'contratos'),
-        where('organizacionId', '==', organizacionId)      )
+        where('organizacionId', '==', organizacionId)
+      )
       
       const contractsSnapshot = await getDocs(contractsQuery)
       const contratos: Contrato[] = []
@@ -59,6 +61,11 @@ export class ContraparteOrganizacionService {
       contractsSnapshot.forEach((doc) => {
         contratos.push(convertFirestoreContract(doc))
       })
+      
+      // Early return if no contracts
+      if (contratos.length === 0) {
+        return []
+      }
       
       // 2. Extraer IDs únicos de contrapartes (checking multiple possible field names)
       const contraparteIds = [...new Set(
@@ -76,60 +83,73 @@ export class ContraparteOrganizacionService {
           .map(c => c.contraparte)
       )]
       
-      // 4. Obtener datos de las organizaciones contrapartes
+      // 4. Optimized: Batch fetch organizations by IDs
       const contrapartes: ContraparteRelacion[] = []
       
-      for (const contraparteId of contraparteIds) {
-        // Skip if contraparteId is undefined or empty
-        if (!contraparteId) continue
-        
-        try {
-          const orgDoc = await getDoc(doc(db, 'organizaciones', contraparteId))
+      // Batch fetch organizations by IDs (up to 10 at a time due to Firestore 'in' query limit)
+      if (contraparteIds.length > 0) {
+        const batchSize = 10
+        for (let i = 0; i < contraparteIds.length; i += batchSize) {
+          const batch = contraparteIds.slice(i, i + batchSize)
           
-          if (orgDoc.exists()) {
-            const organizacion = { id: orgDoc.id, ...orgDoc.data() } as Organizacion            // Calcular estadísticas para esta contraparte
-            const estadisticas = this.calcularEstadisticas(contratos, contraparteId)
+          try {
+            const orgsQuery = query(
+              collection(db, 'organizaciones'),
+              where('__name__', 'in', batch)
+            )
             
-            contrapartes.push({
-              organizacionId: contraparteId,
-              organizacion,
-              estadisticas
-            })
-          }
-        } catch (error) {
-          console.warn(`Error fetching organization ${contraparteId}:`, error)
-        }
-      }
-      
-      // Buscar organizaciones por nombre
-      for (const contraparte of contraparteNames) {
-        if (!contraparte) continue
-        
-        try {
-          const orgsQuery = query(
-            collection(db, 'organizaciones'),
-            where('nombre', '==', contraparte)
-          )
-          
-          const orgsSnapshot = await getDocs(orgsQuery)
-          
-          orgsSnapshot.forEach((orgDoc) => {
-            const organizacion = { id: orgDoc.id, ...orgDoc.data() } as Organizacion
+            const orgsSnapshot = await getDocs(orgsQuery)
             
-            // Verificar que no ya esté en la lista (para evitar duplicados)
-            if (!contrapartes.some(cp => cp.organizacionId === orgDoc.id)) {
-              // Calcular estadísticas para esta contraparte por nombre
-              const estadisticas = this.calcularEstadisticasPorNombre(contratos, contraparte)
+            orgsSnapshot.forEach((orgDoc) => {
+              const organizacion = { id: orgDoc.id, ...orgDoc.data() } as Organizacion
+              
+              // Calcular estadísticas para esta contraparte
+              const estadisticas = this.calcularEstadisticas(contratos, orgDoc.id)
               
               contrapartes.push({
                 organizacionId: orgDoc.id,
                 organizacion,
                 estadisticas
               })
-            }
-          })
-        } catch (error) {
-          console.warn(`Error searching organization by name ${contraparte}:`, error)
+            })
+          } catch (error) {
+            console.warn(`Error fetching organizations batch:`, error)
+          }
+        }
+      }
+      
+      // 5. Optimized: Batch search organizations by names (also in batches)
+      if (contraparteNames.length > 0) {
+        const batchSize = 10
+        for (let i = 0; i < contraparteNames.length; i += batchSize) {
+          const batch = contraparteNames.slice(i, i + batchSize)
+          
+          try {
+            const orgsQuery = query(
+              collection(db, 'organizaciones'),
+              where('nombre', 'in', batch)
+            )
+            
+            const orgsSnapshot = await getDocs(orgsQuery)
+            
+            orgsSnapshot.forEach((orgDoc) => {
+              // Verificar que no ya esté en la lista (para evitar duplicados)
+              if (!contrapartes.some(cp => cp.organizacionId === orgDoc.id)) {
+                const organizacion = { id: orgDoc.id, ...orgDoc.data() } as Organizacion
+                
+                // Calcular estadísticas para esta contraparte por nombre
+                const estadisticas = this.calcularEstadisticasPorNombre(contratos, organizacion.nombre)
+                
+                contrapartes.push({
+                  organizacionId: orgDoc.id,
+                  organizacion,
+                  estadisticas
+                })
+              }
+            })
+          } catch (error) {
+            console.warn(`Error searching organizations by names batch:`, error)
+          }
         }
       }
       
@@ -230,6 +250,32 @@ export class ContraparteOrganizacionService {
     }
   }
   
+  /**
+   * Prefetch contrapartes data for better user experience
+   */
+  static async prefetchContrapartes(organizacionId: string): Promise<void> {
+    try {
+      // Quick check - just count contracts first
+      const contractsCountQuery = query(
+        collection(db, 'contratos'),
+        where('organizacionId', '==', organizacionId),
+        limit(1)
+      )
+      
+      const countSnapshot = await getDocs(contractsCountQuery)
+      
+      // If no contracts, no need to continue
+      if (countSnapshot.empty) {
+        return
+      }
+      
+      // If we have contracts, prefetch the full data
+      await this.getContrapartes(organizacionId)
+    } catch (error) {
+      console.warn('Error prefetching contrapartes:', error)
+    }
+  }
+
   /**
    * Calcula estadísticas para una contraparte específica
    */  private static calcularEstadisticas(contratos: Contrato[], contraparteId: string): ContraparteEstadisticas {

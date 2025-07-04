@@ -18,7 +18,10 @@ export const useContrapartesOrganizacion = () => {
       return await ContraparteOrganizacionService.getContrapartes(usuario.organizacionId)
     },
     enabled: !!usuario?.organizacionId,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 10 * 60 * 1000, // 10 minutos - datos más estables
+    cacheTime: 15 * 60 * 1000, // 15 minutos en cache
+    refetchOnWindowFocus: false, // No refetch al enfocar ventana
+    refetchOnMount: false, // No refetch en cada mount si hay datos cached
   })
 }
 
