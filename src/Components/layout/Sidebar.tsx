@@ -33,7 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       name: 'Proyectos',
-      href: '/projects',
+      href: '/proyectos',
       icon: BriefcaseIcon,
     },
     {

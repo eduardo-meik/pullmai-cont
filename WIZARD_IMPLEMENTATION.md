@@ -188,3 +188,28 @@ If the wizard doesn't appear for new users:
 ### Build Errors
 
 All TypeScript compilation errors have been resolved by adding `export {}` to empty files.
+
+### Firebase Configuration Issues
+
+**Problem**: "Firebase: Error (auth/invalid-api-key)" error when loading the application.
+
+**Common Causes**:
+1. Environment variables not loading properly in Vite
+2. `.env` file not in the correct location (should be in project root)
+3. Environment variables missing `VITE_` prefix
+4. Cached environment variables
+
+**Solutions Applied**:
+
+1. **Added Debug Logging**: Firebase configuration now logs environment variable status to console
+2. **Fallback Configuration**: Added hardcoded fallback values for development
+3. **Environment Variable Validation**: Added checks for API key format and existence
+
+**Debug Information**:
+```typescript
+// Check browser console for these messages:
+console.log('🔍 Firebase Debug Info:')
+console.log('API_KEY:', import.meta.env.VITE_API_KEY ? '✅ Set' : '❌ Missing')
+```
+
+**Quick Fix**: If environment variables aren't loading, the fallback configuration will use hardcoded values from `.env` file.

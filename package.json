@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:prod": "NODE_ENV=production npm run build",
     "preview": "vite preview --port 8080",
+    "preview:prod": "vite preview --port 8080 --mode production",
+    "env:check": "tsx src/scripts/checkEnv.ts",
     "prettyfy": "prettier --write \"./**/*.{js,jsx,json,ts,tsx}\"",
     "populate-db": "tsx src/scripts/poblarBaseDatos.ts",
     "diagnose": "tsx src/scripts/diagnosticoNode.ts"

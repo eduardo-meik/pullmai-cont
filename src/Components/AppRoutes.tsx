@@ -8,6 +8,11 @@ import UpdateProfile from './UpdateProfile'
 import Projects from './Projects'
 import ContractModule from './contracts/ContractModule'
 import ContraparteModule from './contrapartes/ContraparteModule'
+import UserModule from './usuarios/UserModule'
+import PlantillaModule from './plantillas/PlantillaModule'
+import ConfigurationModule from './configuration/ConfigurationModule'
+import AuditModule from './audit/AuditModule'
+import ProjectModule from './projects/ProjectModule'
 import DashboardLayout from './layout/DashboardLayout'
 import ProjectList from './projects/ProjectList'
 import ProjectDetail from './projects/ProjectDetail'
@@ -15,6 +20,7 @@ import TermsAndConditions from './legal/TermsAndConditions'
 import PrivacyPolicy from './legal/PrivacyPolicy'
 import Signup from './Signup'
 import FirstTimeWizard from './onboarding/FirstTimeWizard'
+import EnvTest from './EnvTest'
 import { useFirstTimeWizard } from '../hooks/useFirstTimeWizard'
 
 /**
@@ -32,6 +38,11 @@ const AppRoutes: React.FC = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/contratos" element={<ContractModule />} />
             <Route path="/contrapartes" element={<ContraparteModule />} />
+            <Route path="/usuarios" element={<UserModule />} />
+            <Route path="/plantillas" element={<PlantillaModule />} />
+            <Route path="/configuracion" element={<ConfigurationModule />} />
+            <Route path="/auditoria" element={<AuditModule />} />
+            <Route path="/proyectos" element={<ProjectModule />} />
             <Route path="/update-profile" element={<UpdateProfile />} />
             <Route path="/projects" element={<ProjectList />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
@@ -42,6 +53,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/env-test" element={<EnvTest />} />
       </Routes>
       
       {/* Global First Time Wizard - only shows for authenticated users */}

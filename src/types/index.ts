@@ -126,8 +126,18 @@ export interface Organizacion {
   descripcion?: string
   logo?: string
   configuracion: ConfiguracionOrg
+  branding?: BrandingConfig
   fechaCreacion: Date
   activa: boolean
+}
+
+export interface BrandingConfig {
+  primaryColor?: string // hex color for primary brand color
+  secondaryColor?: string // hex color for secondary brand color
+  navBackgroundColor?: string // hex color for navigation background
+  navTextColor?: string // hex color for navigation text
+  logoUrl?: string // custom logo URL
+  customCSS?: string // custom CSS variables override
 }
 
 export interface ConfiguracionOrg {

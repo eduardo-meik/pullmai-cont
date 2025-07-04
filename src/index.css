@@ -6,4 +6,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Default brand colors - can be overridden by organization branding */
+:root {
+  /* Default brand color palette (orange) */
+  --brand-50: 255, 251, 235;
+  --brand-100: 254, 243, 199;
+  --brand-200: 253, 230, 138;
+  --brand-300: 252, 211, 77;
+  --brand-400: 251, 191, 36;
+  --brand-500: 245, 158, 11;
+  --brand-600: 217, 119, 6;
+  --brand-700: 180, 83, 9;
+  --brand-800: 146, 64, 14;
+  --brand-900: 120, 53, 15;
+
+  /* Default navigation colors */
+  --nav-bg: 146, 64, 14;
+  --nav-bg-hover: 180, 83, 9;
+  --nav-text: #ffffff;
+  --nav-text-muted: #e5e7eb;
+  --nav-text-hover: #ffffff;
+  --nav-border: 180, 83, 9;
+  --nav-accent: 245, 158, 11;
+}
+
 /* Importar estilos personalizados */

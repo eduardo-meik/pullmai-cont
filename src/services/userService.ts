@@ -1,4 +1,4 @@
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
 import { Usuario } from '../types'
 
@@ -8,7 +8,7 @@ export class UserService {
    */
   static async getUserProfile(uid: string): Promise<Usuario | null> {
     try {
-      const userDoc = await getDoc(doc(db, 'users', uid))
+      const userDoc = await getDoc(doc(db, 'usuarios', uid))
       if (userDoc.exists()) {
         return { id: userDoc.id, ...userDoc.data() } as Usuario
       }
@@ -20,11 +20,52 @@ export class UserService {
   }
 
   /**
+   * Gets all users from a specific organization
+   */
+  static async getUsersByOrganization(organizacionId: string): Promise<Usuario[]> {
+    try {
+      const usuariosRef = collection(db, 'usuarios')
+      const q = query(usuariosRef, where('organizacionId', '==', organizacionId))
+      const querySnapshot = await getDocs(q)
+      
+      const users: Usuario[] = []
+      querySnapshot.forEach((doc) => {
+        users.push({ id: doc.id, ...doc.data() } as Usuario)
+      })
+      
+      return users
+    } catch (error) {
+      console.error('Error getting users by organization:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Gets all users (for super admin)
+   */
+  static async getAllUsers(): Promise<Usuario[]> {
+    try {
+      const usuariosRef = collection(db, 'usuarios')
+      const querySnapshot = await getDocs(usuariosRef)
+      
+      const users: Usuario[] = []
+      querySnapshot.forEach((doc) => {
+        users.push({ id: doc.id, ...doc.data() } as Usuario)
+      })
+      
+      return users
+    } catch (error) {
+      console.error('Error getting all users:', error)
+      throw error
+    }
+  }
+
+  /**
    * Updates user profile data in Firestore
    */
   static async updateUserProfile(uid: string, userData: Partial<Usuario>): Promise<void> {
     try {
-      const userRef = doc(db, 'users', uid)
+      const userRef = doc(db, 'usuarios', uid)
       const userDoc = await getDoc(userRef)
       
       if (userDoc.exists()) {

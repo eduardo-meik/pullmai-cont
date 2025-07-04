@@ -16,6 +16,7 @@ import {
 } from 'firebase/auth'
 import { useAuthStore } from '../stores/authStore'
 import UserService from '../services/userService'
+import { UserRole } from '../types'
 
 interface IAuthProviderProps {
   children: JSX.Element
@@ -116,7 +117,7 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
             email: user.email || '',
             nombre: user.displayName?.split(' ')[0] || 'Usuario',
             apellido: user.displayName?.split(' ').slice(1).join(' ') || '',
-            rol: 'user' as any,
+            rol: UserRole.USER,
             organizacionId: 'MEIK LABS',
             departamento: 'General',
             activo: true,
@@ -124,6 +125,12 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
             ultimoAcceso: new Date(),
             permisos: [],
             asignaciones: []
+          }
+          
+          try {
+            await UserService.updateUserProfile(user.uid, userProfile)
+          } catch (error) {
+            console.error('Error saving default user profile:', error)
           }
         }
         

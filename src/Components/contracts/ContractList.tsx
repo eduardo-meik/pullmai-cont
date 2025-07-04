@@ -71,7 +71,7 @@ const ContractList: React.FC = () => {
     try {
       const { doc, getDoc, getFirestore } = await import('firebase/firestore')
       const db = getFirestore()
-      const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
+      const userDoc = await getDoc(doc(db, 'usuarios', currentUser.uid))
       
       if (userDoc.exists()) {
         const userData = userDoc.data()

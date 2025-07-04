@@ -8,6 +8,7 @@ import { useToast, EToastTypes } from '../contexts/ToastContext'
 import { Usuario, UserRole } from '../types'
 import UserService from '../services/userService'
 import { useAuthStore } from '../stores/authStore'
+import pullmaiLogo from '../assets/pullmailogo.svg'
 
 interface UserProfileData {
   nombre: string
@@ -21,7 +22,7 @@ interface UserProfileData {
 
 export default function UpdateProfile() {
   const { currentUser, updatePassword, updateEmail, updateUserProfile } = useAuth()
-  const { setUsuario } = useAuthStore()
+  const { setUsuario, usuario } = useAuthStore()
   const { showTypedToast } = useToast()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -40,6 +41,59 @@ export default function UpdateProfile() {
     password: '',
     passwordConfirm: ''
   })
+
+  // Helper functions for role permissions
+  const canChangeRole = (): boolean => {
+    const currentUserRole = usuario?.rol
+    if (!currentUserRole) return false
+    
+    // USER cannot change their own role
+    if (currentUserRole === UserRole.USER) return false
+    
+    // All other roles can change their role (with restrictions on what they can choose)
+    return true
+  }
+
+  const getAvailableRoles = (): UserRole[] => {
+    const currentUserRole = usuario?.rol
+    if (!currentUserRole) return [UserRole.USER]
+    
+    switch (currentUserRole) {
+      case UserRole.USER:
+        // USER can only remain USER
+        return [UserRole.USER]
+      
+      case UserRole.MANAGER:
+        // MANAGER can be USER or MANAGER
+        return [UserRole.USER, UserRole.MANAGER]
+      
+      case UserRole.ORG_ADMIN:
+        // ORG_ADMIN can be USER, MANAGER, or ORG_ADMIN (but NOT SUPER_ADMIN)
+        return [UserRole.USER, UserRole.MANAGER, UserRole.ORG_ADMIN]
+      
+      case UserRole.SUPER_ADMIN:
+        // SUPER_ADMIN can choose any role
+        return [UserRole.USER, UserRole.MANAGER, UserRole.ORG_ADMIN, UserRole.SUPER_ADMIN]
+      
+      default:
+        return [UserRole.USER]
+    }
+  }
+
+  const getRoleDisplayName = (role: UserRole): string => {
+    switch (role) {
+      case UserRole.USER:
+        return 'Usuario'
+      case UserRole.MANAGER:
+        return 'Gerente'
+      case UserRole.ORG_ADMIN:
+        return 'Administrador de Organización'
+      case UserRole.SUPER_ADMIN:
+        return 'Super Administrador'
+      default:
+        return 'Usuario'
+    }
+  }
 
   // Cargar datos del perfil del usuario desde Firestore usando UserService
   useEffect(() => {
@@ -108,7 +162,16 @@ export default function UpdateProfile() {
     if (formData.password && formData.password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres')
       return false
-    }    return true
+    }
+    
+    // Validate role change permissions
+    const availableRoles = getAvailableRoles()
+    if (!availableRoles.includes(formData.rol)) {
+      setError('No tienes permisos para cambiar a este rol')
+      return false
+    }
+    
+    return true
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -245,8 +308,8 @@ export default function UpdateProfile() {
         <div>
           <img
             className="mx-auto h-12 w-auto"
-            src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0xMS41IC0xMC4yMzE3NCAyMyAyMC40NjM0OCI+CiAgPHRpdGxlPlJlYWN0IExvZ288L3RpdGxlPgogIDxjaXJjbGUgY3g9IjAiIGN5PSIwIiByPSIyLjA1IiBmaWxsPSIjNjFkYWZiIi8+CiAgPGcgc3Ryb2tlPSIjNjFkYWZiIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiPgogICAgPGVsbGlwc2Ugcng9IjExIiByeT0iNC4yIi8+CiAgICA8ZWxsaXBzZSByeD0iMTEiIHJ5PSI0LjIiIHRyYW5zZm9ybT0icm90YXRlKDYwKSIvPgogICAgPGVsbGlwc2Ugcng9IjExIiByeT0iNC4yIiB0cmFuc2Zvcm09InJvdGF0ZSgxMjApIi8+CiAgPC9nPgo8L3N2Zz4K"
-            alt="ContractHub"
+            src={pullmaiLogo}
+            alt="Pullmai"
           />
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
             Actualizar Perfil
@@ -372,16 +435,28 @@ export default function UpdateProfile() {
                   id="rol"
                   value={formData.rol}
                   onChange={handleInputChange('rol')}
-                  className="block w-full pl-10 px-3 py-2.5 border border-neutral-300 rounded-lg text-neutral-900 bg-white transition-colors duration-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 hover:border-neutral-400"
+                  disabled={!canChangeRole()}
+                  className={`block w-full pl-10 px-3 py-2.5 border border-neutral-300 rounded-lg text-neutral-900 bg-white transition-colors duration-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 hover:border-neutral-400 ${
+                    !canChangeRole() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                  }`}
                 >
-                  <option value={UserRole.USER}>Usuario</option>
-                  <option value={UserRole.MANAGER}>Gerente</option>
-                  <option value={UserRole.ORG_ADMIN}>Administrador de Organización</option>
-                  <option value={UserRole.SUPER_ADMIN}>Super Administrador</option>
+                  {getAvailableRoles().map(role => (
+                    <option key={role} value={role}>
+                      {getRoleDisplayName(role)}
+                    </option>
+                  ))}
                 </select>
               </div>
               <p className="text-sm text-neutral-500">
-                Selecciona tu rol en la organización
+                {canChangeRole() 
+                  ? 'Selecciona tu rol en la organización' 
+                  : 'No tienes permisos para cambiar tu rol actual'
+                }
+                {usuario?.rol === UserRole.ORG_ADMIN && (
+                  <span className="block mt-1 text-orange-600">
+                    Los administradores de organización no pueden auto-promocionarse a Super Administrador
+                  </span>
+                )}
               </p>
             </div>            {/* Separador para contraseña */}
             {!testMode && (

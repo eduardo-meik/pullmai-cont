@@ -469,7 +469,7 @@ def update_meiklabs_users(db):
     print(f"\n👥 Actualizando usuarios con email @meiklabs.com a organización 'MEIK LABS'...")
     
     # Obtener todos los usuarios
-    users_ref = db.collection('users')
+    users_ref = db.collection('usuarios')
     users = users_ref.get()
     
     updated_users = 0
@@ -517,7 +517,7 @@ def update_specific_users(db):
         }
     ]
     
-    users_ref = db.collection('users')
+    users_ref = db.collection('usuarios')
     updated_users = 0
     
     for user_data in users_to_update:

@@ -27,7 +27,7 @@ def clean_user_duplicate_fields():
     print("🧹 Iniciando limpieza de campos duplicados en usuarios...")
     
     db = initialize_firebase()
-    users_ref = db.collection('users')
+    users_ref = db.collection('usuarios')
     
     try:
         # Get all users
@@ -90,7 +90,7 @@ def verify_cleanup():
     print("\n🔍 Verificando limpieza...")
     
     db = initialize_firebase()
-    users_ref = db.collection('users')
+    users_ref = db.collection('usuarios')
     
     try:
         users = users_ref.stream()
