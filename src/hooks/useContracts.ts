@@ -4,14 +4,14 @@ import { useAuthStore } from '../stores/authStore'
 import { useContractStore } from '../stores/contractStore'
 import { FormularioContrato, FiltrosContrato, Contrato } from '../types'
 import { useToast } from '../contexts/ToastContext'
-import { CACHE_KEYS, useCacheInvalidation } from './useCacheInvalidation'
 
 export const useContracts = (filtros?: FiltrosContrato) => {
   const { usuario } = useAuthStore()
   const { setContratos, setLoading } = useContractStore()
+  const queryClient = useQueryClient()
 
   return useQuery({
-    queryKey: [CACHE_KEYS.CONTRACTS, usuario?.organizacionId, filtros],
+    queryKey: ['contratos', usuario?.organizacionId, filtros],
     queryFn: async () => {
       if (!usuario?.organizacionId) throw new Error('No hay organización')
       
@@ -29,9 +29,7 @@ export const useContracts = (filtros?: FiltrosContrato) => {
     },
     enabled: !!usuario?.organizacionId,
     staleTime: 5 * 60 * 1000, // 5 minutos
-    cacheTime: 10 * 60 * 1000, // 10 minutos
-    refetchOnWindowFocus: true,
-    refetchOnMount: false
+    cacheTime: 10 * 60 * 1000 // 10 minutos
   })
 }
 
@@ -39,7 +37,7 @@ export const useContract = (id: string) => {
   const { setContratoSeleccionado } = useContractStore()
 
   return useQuery({
-    queryKey: [CACHE_KEYS.CONTRACT, id],
+    queryKey: ['contrato', id],
     queryFn: async () => {
       const contrato = await contractService.getContrato(id)
       setContratoSeleccionado(contrato)
@@ -52,8 +50,7 @@ export const useContract = (id: string) => {
       return contrato
     },
     enabled: !!id,
-    staleTime: 2 * 60 * 1000, // 2 minutos
-    refetchOnWindowFocus: true
+    staleTime: 2 * 60 * 1000 // 2 minutos
   })
 }
 
@@ -61,7 +58,7 @@ export const useCreateContract = () => {
   const { usuario } = useAuthStore()
   const { addContrato } = useContractStore()
   const { showTypedToast } = useToast()
-  const { invalidateContracts, invalidateOrganizationData } = useCacheInvalidation()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (formulario: FormularioContrato) => {
@@ -76,15 +73,7 @@ export const useCreateContract = () => {
       return { id, ...formulario }
     },
     onSuccess: (data) => {
-      // Optimistic update
-      addContrato(data as any)
-      
-      // Invalidate related cache
-      if (usuario?.organizacionId) {
-        invalidateContracts(usuario.organizacionId)
-        invalidateOrganizationData(usuario.organizacionId)
-      }
-      
+      queryClient.invalidateQueries({ queryKey: ['contratos'] })
       showTypedToast('success', 'Contrato creado exitosamente')
     },
     onError: (error: Error) => {
@@ -97,7 +86,7 @@ export const useUpdateContract = () => {
   const { usuario } = useAuthStore()
   const { updateContrato } = useContractStore()
   const { showTypedToast } = useToast()
-  const { invalidateContracts, invalidateContract, updateContractInCache } = useCacheInvalidation()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Contrato> }) => {
@@ -106,18 +95,10 @@ export const useUpdateContract = () => {
       await contractService.actualizarContrato(id, updates, usuario.id)
       return { id, updates }
     },
-    onMutate: async ({ id, updates }: { id: string; updates: Partial<Contrato> }) => {
-      // Optimistic update
-      updateContractInCache(id, (old: Contrato) => ({ ...old, ...updates }))
+    onSuccess: ({ id, updates }) => {
       updateContrato(id, updates)
-    },
-    onSuccess: ({ id }: { id: string }) => {
-      // Invalidate related cache
-      invalidateContract(id)
-      if (usuario?.organizacionId) {
-        invalidateContracts(usuario.organizacionId)
-      }
-      
+      queryClient.invalidateQueries({ queryKey: ['contratos'] })
+      queryClient.invalidateQueries({ queryKey: ['contrato', id] })
       showTypedToast('success', 'Contrato actualizado exitosamente')
     },
     onError: (error: Error) => {
@@ -130,7 +111,7 @@ export const useDeleteContract = () => {
   const { usuario } = useAuthStore()
   const { removeContrato } = useContractStore()
   const { showTypedToast } = useToast()
-  const { invalidateContracts, invalidateOrganizationData } = useCacheInvalidation()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -141,13 +122,7 @@ export const useDeleteContract = () => {
     },
     onSuccess: (id) => {
       removeContrato(id)
-      
-      // Invalidate related cache
-      if (usuario?.organizacionId) {
-        invalidateContracts(usuario.organizacionId)
-        invalidateOrganizationData(usuario.organizacionId)
-      }
-      
+      queryClient.invalidateQueries({ queryKey: ['contratos'] })
       showTypedToast('success', 'Contrato eliminado exitosamente')
     },
     onError: (error: Error) => {
@@ -175,7 +150,7 @@ export const useSearchContracts = () => {
 export const useUnlinkContractFromProject = () => {
   const { usuario } = useAuthStore()
   const { showTypedToast } = useToast()
-  const { invalidateContracts, invalidateProjects } = useCacheInvalidation()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -183,41 +158,12 @@ export const useUnlinkContractFromProject = () => {
       await contractService.desvincularContratoDeProyecto(id)
       return id
     },
-    onSuccess: () => {
-      // Invalidate both contracts and projects cache
-      if (usuario?.organizacionId) {
-        invalidateContracts(usuario.organizacionId)
-        invalidateProjects(usuario.organizacionId)
-      }
-      
+    onSuccess: (id) => {
+      queryClient.invalidateQueries({ queryKey: ['contratos'] })
       showTypedToast('success', 'Contrato desvinculado del proyecto')
     },
     onError: (error: Error) => {
       showTypedToast('error', error.message)
     }
   })
-}
-
-// Hook for contract operations with cache invalidation
-export const useContractOperations = () => {
-  const { invalidateContracts, invalidateContract, invalidateOrganizationData } = useCacheInvalidation()
-  const { usuario } = useAuthStore()
-
-  const invalidateContractsCache = () => {
-    if (usuario?.organizacionId) {
-      invalidateContracts(usuario.organizacionId)
-    }
-  }
-
-  const invalidateAllOrgData = () => {
-    if (usuario?.organizacionId) {
-      invalidateOrganizationData(usuario.organizacionId)
-    }
-  }
-
-  return {
-    invalidateContractsCache,
-    invalidateAllOrgData,
-    invalidateContract
-  }
 }

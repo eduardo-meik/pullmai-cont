@@ -107,6 +107,7 @@ export enum TipoContrato {
   CONFIDENCIALIDAD = 'confidencialidad',
   LABORAL = 'laboral',
   ARRENDAMIENTO = 'arrendamiento',
+  CONSULTORIA = 'consultoria',
   OTRO = 'otro'
 }
 

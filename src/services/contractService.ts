@@ -17,6 +17,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from '../firebase'
 import { Contrato, FormularioContrato, FiltrosContrato, RegistroAuditoria, AccionAuditoria } from '../types'
+import { ContraparteAutoCreationService } from './contraparteAutoCreationService'
 
 // Custom error for contract already linked to another project
 export class ContratoYaVinculadoError extends Error {
@@ -138,6 +139,26 @@ export class ContractService {
       
       const batch = writeBatch(db)
       
+      // Auto-create contraparte organization if contraparte name is provided
+      let contraparteId = formulario.contraparteId || ''
+      
+      if (formulario.contraparte && formulario.contraparte.trim() !== '') {
+        try {
+          console.log('Auto-creating contraparte organization for:', formulario.contraparte)
+          contraparteId = await ContraparteAutoCreationService.getOrCreateContraparte(
+            formulario.contraparte,
+            usuarioId
+          )
+          console.log('Contraparte organization ID:', contraparteId)
+          
+          // Link contraparte to user for future access
+          await ContraparteAutoCreationService.linkContraparteToUser(usuarioId, contraparteId, 'read')
+        } catch (contraparteError) {
+          console.warn('Error creating contraparte organization, continuing with contract creation:', contraparteError)
+          // Don't fail contract creation if contraparte creation fails
+        }
+      }
+      
       // Subir documento si existe
       let pdfUrl = ''
       let documentoNombre = ''
@@ -183,7 +204,7 @@ export class ContractService {
         titulo: formulario.titulo,
         descripcion: formulario.descripcion,
         contraparte: formulario.contraparte,
-        contraparteId: formulario.contraparteId || '', // Add contraparteId from form (optional for now)
+        contraparteId: contraparteId, // Use the auto-created contraparte ID
         fechaInicio: new Date(formulario.fechaInicio),
         fechaTermino: new Date(formulario.fechaTermino),
         monto: formulario.monto,

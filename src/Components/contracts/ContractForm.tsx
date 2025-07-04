@@ -147,14 +147,25 @@ const ContractForm: React.FC<ContractFormProps> = ({
           usuario?.organizacionId || 'default-org', 
           currentUser?.uid || ''
         )
+        
+        // Show additional message if contraparte was auto-created
+        if (formData.contraparte && formData.contraparte.trim() !== '') {
+          showToast(
+            `Contrato creado exitosamente. Se creó automáticamente la organización "${formData.contraparte}" como contraparte.`,
+            'success'
+          )
+        } else {
+          showToast('Contrato creado exitosamente', 'success')
+        }
       }
       
       setUploadProgress({ progress: 100, status: 'completed' })
       
-      showToast(
-        contractToEdit ? 'Contrato actualizado exitosamente' : 'Contrato creado exitosamente',
-        'success'
-      )
+      // Show specific success message for updates only
+      if (contractToEdit) {
+        showToast('Contrato actualizado exitosamente', 'success')
+      }
+      // Success message for creation is handled above with contraparte info
       
       onSuccess()
     } catch (error) {
