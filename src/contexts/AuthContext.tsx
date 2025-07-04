@@ -65,19 +65,7 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
     return signInWithPopup(auth, provider)
   }
   async function login(email: string, password: string): Promise<any> {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password)
-    
-    // Wait for the auth state to be fully processed
-    await new Promise((resolve) => {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user && user.uid === userCredential.user.uid) {
-          unsubscribe()
-          resolve(void 0)
-        }
-      })
-    })
-    
-    return userCredential
+    return signInWithEmailAndPassword(auth, email, password)
   }
 
   function logout(): Promise<void> {

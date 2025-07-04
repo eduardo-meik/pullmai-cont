@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useAuthStore } from '../stores/authStore'
+import { isDateOlderThan } from '../utils/dateUtils'
 
 /**
  * Hook to manage the first-time wizard state
@@ -19,17 +20,51 @@ export function useFirstTimeWizard() {
         return
       }
 
-      // Check if wizard was completed before
+      // Check if wizard was completed before or dismissed
       const wizardCompleted = localStorage.getItem('wizardCompleted') === 'true'
+      const wizardDismissed = localStorage.getItem('wizardDismissed') === 'true'
       
-      // Show wizard if:
-      // 1. User hasn't completed the wizard before
-      // 2. User is authenticated
-      // 3. User has no organization set (except default MEIK LABS)
+      // Check if user profile seems complete
+      const hasCompleteProfile = usuario.nombre && 
+                                usuario.nombre !== 'Usuario' && 
+                                usuario.apellido &&
+                                usuario.organizacionId && 
+                                usuario.rol
+
+      // Check if user account seems established (has been created more than a day ago)
+      const userCreationTime = usuario.fechaCreacion
+      let isEstablishedUser = false
+      
+      if (userCreationTime) {
+        let creationDate: Date
+        
+        // Handle different date formats (Firestore Timestamp, Date object, etc.)
+        if (userCreationTime instanceof Date) {
+          creationDate = userCreationTime
+        } else if (userCreationTime && typeof userCreationTime === 'object' && 'toDate' in userCreationTime) {
+          // Firestore Timestamp
+          creationDate = (userCreationTime as any).toDate()
+        } else if (userCreationTime && typeof userCreationTime === 'object' && 'seconds' in userCreationTime) {
+          // Firestore Timestamp with seconds
+          creationDate = new Date((userCreationTime as any).seconds * 1000)
+        } else if (typeof userCreationTime === 'string' || typeof userCreationTime === 'number') {
+          // String or number timestamp
+          creationDate = new Date(userCreationTime)
+        } else {
+          // Fallback to current date if format is unknown
+          creationDate = new Date()
+        }
+        
+        isEstablishedUser = (Date.now() - creationDate.getTime()) > 24 * 60 * 60 * 1000 // 24 hours
+      }
+      
+      // Show wizard only for truly new users who need onboarding
       const shouldShowWizard = !wizardCompleted && 
+                              !wizardDismissed &&
                               currentUser && 
                               usuario &&
-                              (!usuario.organizacionId || usuario.organizacionId === 'MEIK LABS')
+                              !hasCompleteProfile &&
+                              !isEstablishedUser
 
       setShowWizard(shouldShowWizard)
       setIsLoading(false)
@@ -43,7 +78,7 @@ export function useFirstTimeWizard() {
 
   const closeWizard = () => {
     setShowWizard(false)
-    localStorage.setItem('wizardCompleted', 'true')
+    localStorage.setItem('wizardDismissed', 'true')
   }
 
   const completeWizard = () => {

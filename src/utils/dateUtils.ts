@@ -64,3 +64,52 @@ export const formatDate = (date: Date | { seconds: number } | string): string =>
     return 'Fecha inválida'
   }
 }
+
+/**
+ * Converts various date formats to a JavaScript Date object
+ */
+export const convertToDate = (date: any): Date => {
+  try {
+    if (!date) {
+      return new Date()
+    }
+
+    if (date instanceof Date) {
+      return date
+    }
+
+    if (date && typeof date === 'object' && 'toDate' in date && typeof date.toDate === 'function') {
+      return date.toDate()
+    }
+
+    if (date && typeof date === 'object' && 'seconds' in date) {
+      return new Date(date.seconds * 1000)
+    }
+
+    if (typeof date === 'string' || typeof date === 'number') {
+      return new Date(date)
+    }
+
+    return new Date()
+  } catch (error) {
+    console.warn('Error converting date:', date, error)
+    return new Date()
+  }
+}
+
+/**
+ * Checks if a date is older than the specified number of milliseconds
+ */
+export const isDateOlderThan = (dateValue: any, milliseconds: number): boolean => {
+  try {
+    if (!dateValue) {
+      return false
+    }
+
+    const date = convertToDate(dateValue)
+    return (Date.now() - date.getTime()) > milliseconds
+  } catch (error) {
+    console.warn('Error checking date age:', dateValue, error)
+    return false
+  }
+}
