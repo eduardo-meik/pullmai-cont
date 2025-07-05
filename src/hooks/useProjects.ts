@@ -108,10 +108,12 @@ export const useProject = (id: string) => {
 
 // Hook para obtener contratos de un proyecto
 export const useProjectContracts = (projectName: string) => {
+  const { usuario } = useAuthStore()
+  
   return useQuery({
-    queryKey: [CACHE_KEYS.CONTRACTS, 'project', projectName],
-    queryFn: () => ProjectService.obtenerContratosPorProyecto(projectName),
-    enabled: !!projectName,
+    queryKey: [CACHE_KEYS.CONTRACTS, 'project', projectName, usuario?.organizacionId],
+    queryFn: () => ProjectService.obtenerContratosPorProyecto(projectName, usuario?.organizacionId),
+    enabled: !!projectName && !!usuario?.organizacionId,
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000
   })
@@ -119,10 +121,12 @@ export const useProjectContracts = (projectName: string) => {
 
 // Hook para estadísticas de un proyecto
 export const useProjectStats = (projectName: string) => {
+  const { usuario } = useAuthStore()
+  
   return useQuery({
-    queryKey: [CACHE_KEYS.PROJECT, 'stats', projectName],
-    queryFn: () => ProjectService.calcularEstadisticasProyecto(projectName),
-    enabled: !!projectName,
+    queryKey: [CACHE_KEYS.PROJECT, 'stats', projectName, usuario?.organizacionId],
+    queryFn: () => ProjectService.calcularEstadisticasProyecto(projectName, usuario?.organizacionId),
+    enabled: !!projectName && !!usuario?.organizacionId,
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000
   })

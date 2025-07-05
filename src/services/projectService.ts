@@ -92,14 +92,27 @@ export class ProjectService {
   }
 
   // Obtener contratos de un proyecto
-  static async obtenerContratosPorProyecto(nombreProyecto: string): Promise<Contrato[]> {
+  static async obtenerContratosPorProyecto(nombreProyecto: string, organizacionId?: string): Promise<Contrato[]> {
     try {
       const contratosRef = collection(db, 'contratos')
-      const q = query(
+      
+      // Build query with organization filter if provided
+      let q = query(
         contratosRef,
         where('proyecto', '==', nombreProyecto),
         orderBy('fechaCreacion', 'desc')
       )
+      
+      // Add organization filter if provided
+      if (organizacionId) {
+        q = query(
+          contratosRef,
+          where('proyecto', '==', nombreProyecto),
+          where('organizacionId', '==', organizacionId),
+          orderBy('fechaCreacion', 'desc')
+        )
+      }
+      
       const snapshot = await getDocs(q)
       
       return snapshot.docs.map(doc => ({
@@ -116,9 +129,9 @@ export class ProjectService {
   }
 
   // Calcular estadísticas de un proyecto
-  static async calcularEstadisticasProyecto(nombreProyecto: string): Promise<EstadisticasProyecto> {
+  static async calcularEstadisticasProyecto(nombreProyecto: string, organizacionId?: string): Promise<EstadisticasProyecto> {
     try {
-      const contratos = await this.obtenerContratosPorProyecto(nombreProyecto)
+      const contratos = await this.obtenerContratosPorProyecto(nombreProyecto, organizacionId)
       
       const totalContratos = contratos.length
       const contratosActivos = contratos.filter(c => c.estado === EstadoContrato.ACTIVO).length
