@@ -12,8 +12,12 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline'
 import { Contrato } from '../../types'
-import ContractPDFViewer from './ContractPDFViewer'
+// import ContractPDFViewer from './ContractPDFViewer' // Will be lazy loaded
 import authenticatedPDFService from '../../services/authenticatedPDFService'
+import LoadingSpinner from '../ui/LoadingSpinner' // For Suspense fallback
+import React, { useState, lazy, Suspense } from 'react' // Added lazy and Suspense
+
+const ContractPDFViewer = lazy(() => import('./ContractPDFViewer'))
 
 interface ContractDetailProps {
   isOpen: boolean
@@ -316,13 +320,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       </AnimatePresence>
 
       {/* PDF Viewer */}
-      {contract.pdfUrl && (
-        <ContractPDFViewer
-          isOpen={showPDFViewer}
-          onClose={() => setShowPDFViewer(false)}
-          pdfUrl={contract.pdfUrl}
-          contractTitle={contract.titulo}
-        />
+      {contract.pdfUrl && showPDFViewer && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50"><LoadingSpinner /></div>}>
+          <ContractPDFViewer
+            isOpen={showPDFViewer}
+            onClose={() => setShowPDFViewer(false)}
+            pdfUrl={contract.pdfUrl}
+            contractTitle={contract.titulo}
+          />
+        </Suspense>
       )}
     </>
   )

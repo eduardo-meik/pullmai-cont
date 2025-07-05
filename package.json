@@ -26,9 +26,9 @@
     "@tailwindcss/forms": "^0.5.3",
     "@tanstack/react-query": "^4.29.0",
     "@tanstack/react-query-devtools": "^4.29.0",
-    "axios": "^0.27.2",
+    "axios": "^1.10.0",
     "date-fns": "^2.30.0",
-    "firebase": "^9.9.3",
+    "firebase": "^11.10.0",
     "firebase-admin": "^13.4.0",
     "framer-motion": "^10.18.0",
     "pdfjs-dist": "^5.3.31",
@@ -37,7 +37,7 @@
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.45.0",
     "react-icons": "^4.4.0",
-    "react-pdf": "^7.3.0",
+    "react-pdf": "^10.0.1",
     "react-router-dom": "^6.3.0",
     "react-table": "^7.8.0",
     "react-toastify": "^9.0.8",
@@ -49,7 +49,7 @@
     "@types/react": "^18.0.17",
     "@types/react-dom": "^18.0.6",
     "@types/uuid": "^10.0.0",
-    "@vitejs/plugin-react": "^2.0.1",
+    "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.8",
     "dotenv": "^16.5.0",
     "postcss": "^8.4.16",
@@ -58,6 +58,6 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.3",
     "typescript": "^4.6.4",
-    "vite": "^3.0.7"
+    "vite": "^7.0.2"
   }
 }
