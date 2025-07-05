@@ -1,0 +1,103 @@
+{
+  "id": "consultancy-001",
+  "name": "Contrato de Consultoría",
+  "category": "servicios",
+  "description": "Plantilla para contratos de consultoría especializada",
+  "version": "1.0",
+  "isSystem": true,
+  "fields": [
+    {
+      "id": "cliente_nombre",
+      "label": "Nombre del Cliente",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.name"
+    },
+    {
+      "id": "cliente_rut",
+      "label": "RUT del Cliente",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.rut"
+    },
+    {
+      "id": "cliente_direccion",
+      "label": "Dirección del Cliente",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.address"
+    },
+    {
+      "id": "consultor_nombre",
+      "label": "Nombre del Consultor",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.name"
+    },
+    {
+      "id": "consultor_rut",
+      "label": "RUT del Consultor",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.rut"
+    },
+    {
+      "id": "consultor_direccion",
+      "label": "Dirección del Consultor",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.address"
+    },
+    {
+      "id": "area_consultoria",
+      "label": "Área de Consultoría",
+      "type": "select",
+      "required": true,
+      "options": [
+        { "value": "tecnologia", "label": "Tecnología" },
+        { "value": "marketing", "label": "Marketing" },
+        { "value": "finanzas", "label": "Finanzas" },
+        { "value": "recursos_humanos", "label": "Recursos Humanos" },
+        { "value": "legal", "label": "Legal" },
+        { "value": "estrategia", "label": "Estrategia Empresarial" }
+      ]
+    },
+    {
+      "id": "alcance_trabajo",
+      "label": "Alcance del Trabajo",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "id": "entregables",
+      "label": "Entregables",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "id": "honorarios",
+      "label": "Honorarios",
+      "type": "currency",
+      "required": true,
+      "currency": "CLP"
+    },
+    {
+      "id": "modalidad_pago",
+      "label": "Modalidad de Pago",
+      "type": "select",
+      "required": true,
+      "options": [
+        { "value": "mensual", "label": "Mensual" },
+        { "value": "por_hito", "label": "Por hito" },
+        { "value": "al_termino", "label": "Al término" }
+      ]
+    },
+    {
+      "id": "duracion_meses",
+      "label": "Duración (meses)",
+      "type": "number",
+      "required": true
+    }
+  ],
+  "content": "CONTRATO DE CONSULTORÍA\n\nEn {{ciudad}}, a {{fecha_contrato}}, entre {{cliente_nombre}}, RUT {{cliente_rut}}, con domicilio en {{cliente_direccion}}, en adelante \"el Cliente\", y {{consultor_nombre}}, RUT {{consultor_rut}}, con domicilio en {{consultor_direccion}}, en adelante \"el Consultor\", se ha convenido el siguiente contrato de consultoría:\n\nPRIMERO: OBJETO\nEl Consultor prestará servicios de consultoría especializada en {{area_consultoria}} al Cliente.\n\nSEGUNDO: ALCANCE\nEl alcance del trabajo comprende: {{alcance_trabajo}}\n\nTERCERO: ENTREGABLES\nEl Consultor se compromete a entregar: {{entregables}}\n\nCUARTO: HONORARIOS\nLos honorarios del Consultor serán de ${{honorarios}}, que se pagarán {{modalidad_pago}}.\n\nQUINTO: DURACIÓN\nLa duración del presente contrato será de {{duracion_meses}} meses, contados desde la fecha de suscripción.\n\nSEXTO: CONFIDENCIALIDAD\nEl Consultor se obliga a mantener estricta confidencialidad sobre toda la información a la que tenga acceso.\n\nSÉPTIMO: PROPIEDAD INTELECTUAL\nTodos los trabajos desarrollados serán de propiedad del Cliente, salvo pacto en contrario.\n\nOCTAVO: TÉRMINO\nEl contrato podrá terminarse por mutuo acuerdo o por incumplimiento de cualquiera de las partes.\n\nEn comprobante, firman:\n\n\n_________________________                    _________________________\n{{cliente_nombre}}                           {{consultor_nombre}}\nCliente                                      Consultor"
+}

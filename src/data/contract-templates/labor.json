@@ -1,0 +1,88 @@
+{
+  "id": "labor-001",
+  "name": "Contrato de Trabajo",
+  "category": "laboral",
+  "description": "Plantilla estándar para contratos de trabajo indefinido",
+  "version": "1.0",
+  "isSystem": true,
+  "fields": [
+    {
+      "id": "empleador_nombre",
+      "label": "Nombre del Empleador",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.name"
+    },
+    {
+      "id": "empleador_rut",
+      "label": "RUT del Empleador",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.rut"
+    },
+    {
+      "id": "empleador_direccion",
+      "label": "Dirección del Empleador",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.address"
+    },
+    {
+      "id": "trabajador_nombre",
+      "label": "Nombre del Trabajador",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.name"
+    },
+    {
+      "id": "trabajador_rut",
+      "label": "RUT del Trabajador",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.rut"
+    },
+    {
+      "id": "trabajador_direccion",
+      "label": "Dirección del Trabajador",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.address"
+    },
+    {
+      "id": "cargo",
+      "label": "Cargo",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "sueldo_base",
+      "label": "Sueldo Base",
+      "type": "currency",
+      "required": true,
+      "currency": "CLP"
+    },
+    {
+      "id": "fecha_inicio",
+      "label": "Fecha de Inicio",
+      "type": "date",
+      "required": true
+    },
+    {
+      "id": "lugar_trabajo",
+      "label": "Lugar de Trabajo",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "jornada",
+      "label": "Jornada de Trabajo",
+      "type": "select",
+      "required": true,
+      "options": [
+        { "value": "completa", "label": "Jornada Completa (45 horas)" },
+        { "value": "parcial", "label": "Jornada Parcial" }
+      ]
+    }
+  ],
+  "content": "CONTRATO DE TRABAJO\n\nEn {{ciudad}}, a {{fecha_contrato}}, entre {{empleador_nombre}}, RUT {{empleador_rut}}, con domicilio en {{empleador_direccion}}, en adelante \"el Empleador\", y {{trabajador_nombre}}, RUT {{trabajador_rut}}, con domicilio en {{trabajador_direccion}}, en adelante \"el Trabajador\", se ha convenido el siguiente contrato de trabajo:\n\nPRIMERO: El Trabajador se obliga a prestar servicios personales al Empleador en el cargo de {{cargo}}.\n\nSEGUNDO: La remuneración del Trabajador será de ${{sueldo_base}} mensuales.\n\nTERCERO: El presente contrato comenzará a regir el día {{fecha_inicio}}.\n\nCUARTO: El lugar de trabajo será {{lugar_trabajo}}.\n\nQUINTO: La jornada de trabajo será de {{jornada}}.\n\nSEXTO: El presente contrato se regirá por las disposiciones del Código del Trabajo y sus leyes complementarias.\n\nEn comprobante, firman:\n\n\n_________________________                    _________________________\n{{empleador_nombre}}                         {{trabajador_nombre}}\nEmpleador                                    Trabajador"
+}

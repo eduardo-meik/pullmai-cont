@@ -104,20 +104,34 @@ const ConfigurationModule: React.FC = () => {
       switch (section) {
         case 'general':
           if (isSuperAdmin && systemConfig) {
+            const cleanData = {
+              ...systemConfig,
+              general: {
+                ...systemConfig.general,
+                ...data
+              }
+            }
             await ConfigurationService.updateSystemConfiguration(
-              { ...systemConfig, general: data },
+              cleanData,
               currentUser.uid,
               `Updated general configuration`
             )
-            setSystemConfig(prev => prev ? { ...prev, general: data } : null)
+            setSystemConfig(prev => prev ? cleanData : null)
           } else if (orgConfig && usuario?.organizacionId) {
+            const cleanData = {
+              ...orgConfig,
+              general: {
+                ...orgConfig.general,
+                ...data
+              }
+            }
             await ConfigurationService.updateOrganizationConfiguration(
               usuario.organizacionId,
-              { ...orgConfig, general: data },
+              cleanData,
               currentUser.uid,
               `Updated general configuration`
             )
-            setOrgConfig(prev => prev ? { ...prev, general: data } : null)
+            setOrgConfig(prev => prev ? cleanData : null)
           }
           break
           
@@ -147,25 +161,56 @@ const ConfigurationModule: React.FC = () => {
           
         case 'organization':
           if (orgConfig && usuario?.organizacionId) {
+            // Prepare organization configuration data
+            const orgConfigData = {
+              ...orgConfig,
+              general: {
+                ...orgConfig.general,
+                name: data.name,
+                displayName: data.name,
+                description: data.description,
+                logo: data.logo || null,
+                contactInfo: {
+                  email: data.email || '',
+                  phone: data.telefono || '',
+                  address: data.direccion || ''
+                },
+                language: data.language || 'es',
+                timezone: data.timezone || 'America/Santiago',
+                currency: data.currency || 'CLP'
+              }
+            }
+
+            // Prepare organization data update
+            const orgDataUpdate = {
+              nombre: data.name,
+              rut: data.rut,
+              direccion: data.direccion,
+              ciudad: data.ciudad,
+              telefono: data.telefono,
+              email: data.email,
+              representanteLegal: data.representanteLegal,
+              rutRepresentanteLegal: data.rutRepresentanteLegal,
+              tipoEntidad: data.tipoEntidad,
+              descripcion: data.description,
+              ...(data.logo && { logo: data.logo }),
+              configuracion: {
+                ...organizationData?.configuracion,
+                ...data.configuracion
+              }
+            }
+
             // Update both configuration and organization data
             await Promise.all([
               ConfigurationService.updateOrganizationConfiguration(
                 usuario.organizacionId,
-                { ...orgConfig, general: data },
+                orgConfigData,
                 currentUser.uid,
                 `Updated organization configuration`
               ),
-              OrganizacionService.actualizarOrganizacion(usuario.organizacionId, {
-                nombre: data.name,
-                descripcion: data.description,
-                logo: data.logo,
-                configuracion: {
-                  ...organizationData?.configuracion,
-                  ...data.configuracion
-                }
-              })
+              OrganizacionService.actualizarOrganizacion(usuario.organizacionId, orgDataUpdate)
             ])
-            setOrgConfig(prev => prev ? { ...prev, general: data } : null)
+            setOrgConfig(prev => prev ? orgConfigData : null)
             // Reload organization data to reflect changes
             if (organizationData) {
               const updatedOrgData = await OrganizacionService.getOrganizacionById(usuario.organizacionId)
@@ -809,6 +854,14 @@ const OrganizationConfigSection: React.FC<OrganizationConfigSectionProps> = ({
       setFormData({
         // From organization record
         name: organizationData?.nombre || '',
+        rut: organizationData?.rut || '',
+        direccion: organizationData?.direccion || '',
+        ciudad: organizationData?.ciudad || '',
+        telefono: organizationData?.telefono || '',
+        email: organizationData?.email || '',
+        representanteLegal: organizationData?.representanteLegal || '',
+        rutRepresentanteLegal: organizationData?.rutRepresentanteLegal || '',
+        tipoEntidad: organizationData?.tipoEntidad || 'empresa',
         description: organizationData?.descripcion || '',
         logo: organizationData?.logo || '',
         website: '', // Not in current org schema, add if needed
@@ -816,12 +869,6 @@ const OrganizationConfigSection: React.FC<OrganizationConfigSectionProps> = ({
         language: orgConfig?.general?.language || 'es',
         timezone: orgConfig?.general?.timezone || 'America/Santiago',
         currency: orgConfig?.general?.currency || 'CLP',
-        // Contact info structure
-        contactInfo: {
-          email: '', // Add to org schema if needed
-          phone: '',
-          address: ''
-        },
         // Organization specific settings
         configuracion: organizationData?.configuracion || {}
       })
@@ -858,13 +905,109 @@ const OrganizationConfigSection: React.FC<OrganizationConfigSectionProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nombre para Mostrar
+              RUT
             </label>
             <input
               type="text"
-              value={formData.displayName || ''}
-              onChange={(e) => handleChange('displayName', e.target.value)}
+              value={formData.rut || ''}
+              onChange={(e) => handleChange('rut', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Ej: 12.345.678-9"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tipo de Entidad
+            </label>
+            <select
+              value={formData.tipoEntidad || 'empresa'}
+              onChange={(e) => handleChange('tipoEntidad', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="empresa">Empresa</option>
+              <option value="persona_natural">Persona Natural</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Dirección
+            </label>
+            <input
+              type="text"
+              value={formData.direccion || ''}
+              onChange={(e) => handleChange('direccion', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Dirección completa"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Ciudad
+            </label>
+            <input
+              type="text"
+              value={formData.ciudad || ''}
+              onChange={(e) => handleChange('ciudad', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Ciudad"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Teléfono
+            </label>
+            <input
+              type="tel"
+              value={formData.telefono || ''}
+              onChange={(e) => handleChange('telefono', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="+56 9 1234 5678"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email Corporativo
+            </label>
+            <input
+              type="email"
+              value={formData.email || ''}
+              onChange={(e) => handleChange('email', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="contacto@empresa.cl"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Representante Legal
+            </label>
+            <input
+              type="text"
+              value={formData.representanteLegal || ''}
+              onChange={(e) => handleChange('representanteLegal', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Nombre del representante legal"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              RUT Representante Legal
+            </label>
+            <input
+              type="text"
+              value={formData.rutRepresentanteLegal || ''}
+              onChange={(e) => handleChange('rutRepresentanteLegal', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Ej: 12.345.678-9"
             />
           </div>
 
@@ -890,22 +1033,6 @@ const OrganizationConfigSection: React.FC<OrganizationConfigSectionProps> = ({
               onChange={(e) => handleChange('website', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="https://example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email de Contacto
-            </label>
-            <input
-              type="email"
-              value={formData.contactInfo?.email || ''}
-              onChange={(e) => handleChange('contactInfo', { 
-                ...formData.contactInfo, 
-                email: e.target.value 
-              })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
             />
           </div>
         </div>

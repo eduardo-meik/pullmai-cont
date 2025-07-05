@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
-import { Organizacion, ConfiguracionOrg } from '../../types'
+import { Organizacion, ConfiguracionOrg, TipoEntidad } from '../../types'
 import Input from '../ui/Input'
 import { useToast } from '../../contexts/ToastContext'
 
@@ -15,6 +15,14 @@ interface OrganizacionFormProps {
 
 const organizacionSchema = yup.object({
   nombre: yup.string().required('El nombre es requerido').min(2, 'Mínimo 2 caracteres'),
+  rut: yup.string().optional(),
+  direccion: yup.string().optional(),
+  ciudad: yup.string().optional(),
+  telefono: yup.string().optional(),
+  email: yup.string().email('Email inválido').optional(),
+  representanteLegal: yup.string().optional(),
+  rutRepresentanteLegal: yup.string().optional(),
+  tipoEntidad: yup.string().oneOf(Object.values(TipoEntidad) as string[]).optional(),
   descripcion: yup.string().optional(),
   logo: yup.string().url('Debe ser una URL válida').optional(),
   activa: yup.boolean().default(true)
@@ -49,6 +57,14 @@ const OrganizacionForm: React.FC<OrganizacionFormProps> = ({
     resolver: yupResolver(organizacionSchema),
     defaultValues: {
       nombre: organizacion?.nombre || '',
+      rut: organizacion?.rut || '',
+      direccion: organizacion?.direccion || '',
+      ciudad: organizacion?.ciudad || '',
+      telefono: organizacion?.telefono || '',
+      email: organizacion?.email || '',
+      representanteLegal: organizacion?.representanteLegal || '',
+      rutRepresentanteLegal: organizacion?.rutRepresentanteLegal || '',
+      tipoEntidad: organizacion?.tipoEntidad || 'empresa',
       descripcion: organizacion?.descripcion || '',
       logo: organizacion?.logo || '',
       activa: organizacion?.activa ?? true
@@ -60,7 +76,8 @@ const OrganizacionForm: React.FC<OrganizacionFormProps> = ({
       const organizacionData = {
         ...data,
         configuracion,
-        activa: data.activa ?? true
+        activa: data.activa ?? true,
+        tipoEntidad: data.tipoEntidad as 'empresa' | 'persona_natural' | undefined
       }
 
       await onSubmit(organizacionData)
@@ -87,6 +104,71 @@ const OrganizacionForm: React.FC<OrganizacionFormProps> = ({
               error={errors.nombre?.message}
               {...register('nombre')}
             />
+
+            <Input
+              label="RUT"
+              placeholder="Ej: 12.345.678-9"
+              error={errors.rut?.message}
+              {...register('rut')}
+            />
+
+            <Input
+              label="Dirección"
+              placeholder="Dirección completa"
+              error={errors.direccion?.message}
+              {...register('direccion')}
+            />
+
+            <Input
+              label="Ciudad"
+              placeholder="Ciudad"
+              error={errors.ciudad?.message}
+              {...register('ciudad')}
+            />
+
+            <Input
+              label="Teléfono"
+              placeholder="+56 9 1234 5678"
+              error={errors.telefono?.message}
+              {...register('telefono')}
+            />
+
+            <Input
+              label="Email"
+              placeholder="contacto@empresa.cl"
+              error={errors.email?.message}
+              {...register('email')}
+            />
+
+            <Input
+              label="Representante Legal"
+              placeholder="Nombre del representante legal"
+              error={errors.representanteLegal?.message}
+              {...register('representanteLegal')}
+            />
+
+            <Input
+              label="RUT Representante Legal"
+              placeholder="Ej: 12.345.678-9"
+              error={errors.rutRepresentanteLegal?.message}
+              {...register('rutRepresentanteLegal')}
+            />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Entidad
+              </label>
+              <select
+                {...register('tipoEntidad')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="empresa">Empresa</option>
+                <option value="persona_natural">Persona Natural</option>
+              </select>
+              {errors.tipoEntidad && (
+                <p className="mt-1 text-sm text-red-600">{errors.tipoEntidad.message}</p>
+              )}
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

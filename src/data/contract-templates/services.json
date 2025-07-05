@@ -1,0 +1,90 @@
+{
+  "id": "services-001",
+  "name": "Contrato de Servicios Profesionales",
+  "category": "servicios",
+  "description": "Plantilla para contratos de prestación de servicios profesionales",
+  "version": "1.0",
+  "isSystem": true,
+  "fields": [
+    {
+      "id": "contratante_nombre",
+      "label": "Nombre del Contratante",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.name"
+    },
+    {
+      "id": "contratante_rut",
+      "label": "RUT del Contratante",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.rut"
+    },
+    {
+      "id": "contratante_direccion",
+      "label": "Dirección del Contratante",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.address"
+    },
+    {
+      "id": "contratista_nombre",
+      "label": "Nombre del Contratista",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.name"
+    },
+    {
+      "id": "contratista_rut",
+      "label": "RUT del Contratista",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.rut"
+    },
+    {
+      "id": "contratista_direccion",
+      "label": "Dirección del Contratista",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.address"
+    },
+    {
+      "id": "servicios_descripcion",
+      "label": "Descripción de los Servicios",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "id": "valor_total",
+      "label": "Valor Total",
+      "type": "currency",
+      "required": true,
+      "currency": "CLP"
+    },
+    {
+      "id": "forma_pago",
+      "label": "Forma de Pago",
+      "type": "select",
+      "required": true,
+      "options": [
+        { "value": "contado", "label": "Al contado" },
+        { "value": "30_dias", "label": "30 días" },
+        { "value": "60_dias", "label": "60 días" },
+        { "value": "cuotas", "label": "En cuotas" }
+      ]
+    },
+    {
+      "id": "plazo_entrega",
+      "label": "Plazo de Entrega",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "fecha_inicio",
+      "label": "Fecha de Inicio",
+      "type": "date",
+      "required": true
+    }
+  ],
+  "content": "CONTRATO DE PRESTACIÓN DE SERVICIOS PROFESIONALES\n\nEn {{ciudad}}, a {{fecha_contrato}}, entre {{contratante_nombre}}, RUT {{contratante_rut}}, con domicilio en {{contratante_direccion}}, en adelante \"el Contratante\", y {{contratista_nombre}}, RUT {{contratista_rut}}, con domicilio en {{contratista_direccion}}, en adelante \"el Contratista\", se ha convenido el siguiente contrato:\n\nPRIMERO: OBJETO DEL CONTRATO\nEl Contratista se obliga a prestar al Contratante los siguientes servicios: {{servicios_descripcion}}\n\nSEGUNDO: VALOR Y FORMA DE PAGO\nEl valor total de los servicios será de ${{valor_total}}, que se pagará {{forma_pago}}.\n\nTERCERO: PLAZO\nLos servicios deberán ser ejecutados en un plazo de {{plazo_entrega}}, contado desde {{fecha_inicio}}.\n\nCUARTO: OBLIGACIONES DEL CONTRATISTA\nEl Contratista se obliga a ejecutar los servicios con la debida diligencia y de acuerdo a las mejores prácticas profesionales.\n\nQUINTO: OBLIGACIONES DEL CONTRATANTE\nEl Contratante se obliga a proporcionar la información y elementos necesarios para la ejecución de los servicios.\n\nSEXTO: TÉRMINO DEL CONTRATO\nEl contrato terminará por el cumplimiento de las obligaciones o por las causales establecidas en la ley.\n\nEn comprobante, firman:\n\n\n_________________________                    _________________________\n{{contratante_nombre}}                       {{contratista_nombre}}\nContratante                                  Contratista"
+}

@@ -72,10 +72,30 @@ export function ToastProvider({ children }: IToastProviderProps): JSX.Element {
       progress: undefined,
     })
   }
+  // Add addToast function for compatibility
+  function addToast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') {
+    switch (type) {
+      case 'success':
+        showTypedToast(EToastTypes.SUCCESS, message)
+        break
+      case 'error':
+        showTypedToast(EToastTypes.ERROR, message)
+        break
+      case 'warning':
+        showTypedToast(EToastTypes.WARNING, message)
+        break
+      case 'info':
+      default:
+        showTypedToast(EToastTypes.INFO, message)
+        break
+    }
+  }
+
   const value = {
     showError,
     showTypedToast,
     showToast,
+    addToast,
   }
 
   return (

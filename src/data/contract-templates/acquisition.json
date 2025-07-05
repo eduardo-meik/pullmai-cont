@@ -1,0 +1,125 @@
+{
+  "id": "acquisition-001",
+  "name": "Contrato de Compraventa",
+  "category": "comercial",
+  "description": "Plantilla para contratos de compraventa de bienes",
+  "version": "1.0",
+  "isSystem": true,
+  "fields": [
+    {
+      "id": "vendedor_nombre",
+      "label": "Nombre del Vendedor",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.name"
+    },
+    {
+      "id": "vendedor_rut",
+      "label": "RUT del Vendedor",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.rut"
+    },
+    {
+      "id": "vendedor_direccion",
+      "label": "Dirección del Vendedor",
+      "type": "text",
+      "required": true,
+      "autoFill": "contraparte.address"
+    },
+    {
+      "id": "comprador_nombre",
+      "label": "Nombre del Comprador",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.name"
+    },
+    {
+      "id": "comprador_rut",
+      "label": "RUT del Comprador",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.rut"
+    },
+    {
+      "id": "comprador_direccion",
+      "label": "Dirección del Comprador",
+      "type": "text",
+      "required": true,
+      "autoFill": "organization.address"
+    },
+    {
+      "id": "bien_descripcion",
+      "label": "Descripción del Bien",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "id": "precio",
+      "label": "Precio",
+      "type": "currency",
+      "required": true,
+      "currency": "CLP"
+    },
+    {
+      "id": "forma_pago",
+      "label": "Forma de Pago",
+      "type": "select",
+      "required": true,
+      "options": [
+        { "value": "contado", "label": "Al contado" },
+        { "value": "credito", "label": "A crédito" },
+        { "value": "cuotas", "label": "En cuotas" }
+      ]
+    },
+    {
+      "id": "fecha_entrega",
+      "label": "Fecha de Entrega",
+      "type": "date",
+      "required": true
+    },
+    {
+      "id": "garantia",
+      "label": "Garantía (meses)",
+      "type": "number",
+      "required": false
+    },
+    {
+      "id": "representante_legal_comprador",
+      "label": "Representante Legal del Comprador",
+      "type": "text",
+      "required": false,
+      "autoFill": "organization.legalRep"
+    },
+    {
+      "id": "rut_representante_legal_comprador",
+      "label": "RUT Representante Legal del Comprador",
+      "type": "text",
+      "required": false,
+      "autoFill": "organization.legalRepRut"
+    },
+    {
+      "id": "tipo_entidad_comprador",
+      "label": "Tipo de Entidad del Comprador",
+      "type": "select",
+      "required": false,
+      "autoFill": "organization.entityType",
+      "options": [
+        { "value": "empresa", "label": "Empresa" },
+        { "value": "persona_natural", "label": "Persona Natural" }
+      ]
+    },
+    {
+      "id": "tipo_entidad_vendedor",
+      "label": "Tipo de Entidad del Vendedor",
+      "type": "select",
+      "required": false,
+      "autoFill": "contraparte.entityType",
+      "options": [
+        { "value": "empresa", "label": "Empresa" },
+        { "value": "persona_natural", "label": "Persona Natural" }
+      ]
+    }
+  ],
+  "content": "CONTRATO DE COMPRAVENTA\n\nEn {{ciudad}}, a {{fecha_contrato}}, entre {{vendedor_nombre}}, RUT {{vendedor_rut}}, con domicilio en {{vendedor_direccion}}, en adelante \"el Vendedor\", y {{comprador_nombre}}, RUT {{comprador_rut}}, con domicilio en {{comprador_direccion}}{{#if representante_legal_comprador}}, representada por {{representante_legal_comprador}}, RUT {{rut_representante_legal_comprador}}{{/if}}, en adelante \"el Comprador\", se ha convenido el siguiente contrato de compraventa:\n\nPRIMERO: OBJETO DE LA VENTA\nEl Vendedor vende al Comprador el siguiente bien: {{bien_descripcion}}\n\nSEGUNDO: PRECIO\nEl precio de la venta es de ${{precio}}, que el Comprador pagará {{forma_pago}}.\n\nTERCERO: ENTREGA\nLa entrega del bien se realizará el día {{fecha_entrega}} en {{comprador_direccion}}.\n\nCUARTO: GARANTÍA\n{{#if garantia}}El Vendedor otorga una garantía de {{garantia}} meses sobre el bien vendido.{{/if}}\n\nQUINTO: OBLIGACIONES DEL VENDEDOR\nEl Vendedor se obliga a entregar el bien en perfecto estado y libre de gravámenes.\n\nSEXTO: OBLIGACIONES DEL COMPRADOR\nEl Comprador se obliga a pagar el precio en la forma convenida y recibir el bien.\n\nSÉPTIMO: DOMICILIO\nPara todos los efectos legales, las partes fijan domicilio en la ciudad de {{ciudad}}.\n\nEn comprobante, firman:\n\n\n_________________________                    _________________________\n{{vendedor_nombre}}                          {{#if representante_legal_comprador}}{{representante_legal_comprador}}{{else}}{{comprador_nombre}}{{/if}}\nVendedor                                     {{#if representante_legal_comprador}}Representante Legal{{else}}Comprador{{/if}}"
+}

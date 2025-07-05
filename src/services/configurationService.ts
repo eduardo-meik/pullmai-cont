@@ -437,6 +437,34 @@ export class ConfigurationService {
   }
   
   /**
+   * Utility function to remove undefined values from objects recursively
+   */
+  private static removeUndefinedValues(obj: any): any {
+    if (obj === null || obj === undefined) {
+      return null
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.removeUndefinedValues(item)).filter(item => item !== undefined)
+    }
+    
+    if (typeof obj === 'object') {
+      const cleaned: any = {}
+      for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined) {
+          const cleanedValue = this.removeUndefinedValues(value)
+          if (cleanedValue !== undefined) {
+            cleaned[key] = cleanedValue
+          }
+        }
+      }
+      return cleaned
+    }
+    
+    return obj
+  }
+
+  /**
    * Actualiza la configuración de una organización
    */
   static async updateOrganizationConfiguration(
@@ -461,8 +489,11 @@ export class ConfigurationService {
         )
       }
       
+      // Filter out undefined values to prevent Firestore errors
+      const cleanConfig = this.removeUndefinedValues(config)
+      
       await updateDoc(configRef, {
-        ...config,
+        ...cleanConfig,
         lastUpdated: Timestamp.now(),
         updatedBy: userId
       })
@@ -493,12 +524,12 @@ export class ConfigurationService {
       general: {
         name: organizacionId,
         displayName: orgData.nombre || 'Organización',
-        description: orgData.descripcion,
-        logo: orgData.logo,
+        description: orgData.descripcion || '',
+        logo: orgData.logo || null,
         contactInfo: {
           email: orgData.contacto?.email || '',
-          phone: orgData.contacto?.telefono,
-          address: orgData.contacto?.direccion
+          phone: orgData.contacto?.telefono || '',
+          address: orgData.contacto?.direccion || ''
         },
         timezone: 'America/Santiago',
         language: 'es',
@@ -644,10 +675,11 @@ export class ConfigurationService {
       }
     }
     
-    // Guardar configuración por defecto
+    // Guardar configuración por defecto (filter undefined values)
     const configRef = doc(db, 'organizationConfiguration', organizacionId)
+    const cleanConfig = this.removeUndefinedValues(defaultConfig)
     await setDoc(configRef, {
-      ...defaultConfig,
+      ...cleanConfig,
       lastUpdated: Timestamp.now()
     })
     

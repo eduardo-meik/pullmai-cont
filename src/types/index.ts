@@ -37,6 +37,11 @@ export enum UserRole {
   USER = 'user'
 }
 
+export enum TipoEntidad {
+  EMPRESA = 'empresa',
+  PERSONA_NATURAL = 'persona_natural'
+}
+
 // Nuevas enumeraciones para contratos
 export enum CategoriaContrato {
   SERVICIOS = 'servicios',
@@ -124,8 +129,16 @@ export enum EstadoContrato {
 export interface Organizacion {
   id: string
   nombre: string
+  rut?: string
+  direccion?: string
+  ciudad?: string
+  telefono?: string
+  email?: string
   descripcion?: string
   logo?: string
+  representanteLegal?: string
+  rutRepresentanteLegal?: string
+  tipoEntidad?: 'empresa' | 'persona_natural'
   configuracion: ConfiguracionOrg
   branding?: BrandingConfig
   fechaCreacion: Date

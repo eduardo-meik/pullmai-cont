@@ -1,267 +1,221 @@
-﻿import React, { useState } from 'react'
+﻿import React, { useState, useEffect } from 'react';
+import { ContractGenerator } from '../contracts/ContractGenerator';
+import { TemplateSelection } from '../contracts/TemplateSelection';
+import { ContractTemplate } from '../../types/templates';
+import { useAuthStore } from '../../stores/authStore';
+import { OrganizacionService } from '../../services/organizacionService';
+import { Organizacion, UserRole } from '../../types';
 import {
   DocumentTextIcon,
   DocumentDuplicateIcon,
-  MagnifyingGlassIcon,
   PlusIcon,
-  Squares2X2Icon,
-  ListBulletIcon,
-  FolderIcon
-} from '@heroicons/react/24/outline'
-import { useAuth } from '../../contexts/AuthContext'
-import { useAuthStore } from '../../stores/authStore'
-import { UserRole } from '../../types'
+  ViewColumnsIcon,
+  Squares2X2Icon
+} from '@heroicons/react/24/outline';
 
-type ViewMode = 'table' | 'cards'
-
-interface PlantillaContrato {
-  id: string
-  nombre: string
-  descripcion: string
-  categoria: string
-  fechaCreacion: Date
-  creadoPor: string
-  activa: boolean
-  usos: number
-}
+type ViewMode = 'generator' | 'templates' | 'management';
 
 const PlantillaModule: React.FC = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>('table')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const { currentUser } = useAuth()
-  const { usuario } = useAuthStore()
+  const [viewMode, setViewMode] = useState<ViewMode>('generator');
+  const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
+  const [organizationData, setOrganizationData] = useState<Organizacion | null>(null);
+  const [isLoadingOrg, setIsLoadingOrg] = useState(false);
+  const { usuario } = useAuthStore();
 
-  // Mock data for now - in real implementation, fetch from service
-  const plantillas: PlantillaContrato[] = []
-  const isLoading = false
-  const error = null
+  // Load organization data by default
+  useEffect(() => {
+    const loadOrganizationData = async () => {
+      if (!usuario?.organizacionId) return;
+      
+      try {
+        setIsLoadingOrg(true);
+        const orgData = await OrganizacionService.getOrganizacionById(usuario.organizacionId);
+        setOrganizationData(orgData);
+      } catch (error) {
+        console.error('Error loading organization data:', error);
+      } finally {
+        setIsLoadingOrg(false);
+      }
+    };
 
-  const canManagePlantillas = usuario?.rol === UserRole.ORG_ADMIN || usuario?.rol === UserRole.SUPER_ADMIN || usuario?.rol === UserRole.MANAGER
+    loadOrganizationData();
+  }, [usuario?.organizacionId]);
 
-  const handleCreatePlantilla = () => {
-    setShowCreateForm(true)
-  }
+  const canManageTemplates = usuario?.rol === UserRole.ORG_ADMIN || 
+                            usuario?.rol === UserRole.SUPER_ADMIN || 
+                            usuario?.rol === UserRole.MANAGER;
 
-  const handleUsePlantilla = (plantilla: PlantillaContrato) => {
-    console.log('Usar plantilla:', plantilla.nombre)
-    // TODO: Navigate to contract creation with this template
-  }
+  const handleContractSaved = (contractId: string) => {
+    // Handle successful contract save - could navigate to contracts module
+    console.log('Contract saved with ID:', contractId);
+    // You might want to show a success toast or navigate somewhere
+  };
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <div className="text-red-600 text-lg font-medium mb-2">
-              Error al cargar las plantillas
+  const renderTabButtons = () => (
+    <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+      <button
+        onClick={() => setViewMode('generator')}
+        className={`
+          flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+          ${viewMode === 'generator' 
+            ? 'bg-white text-blue-600 shadow-sm' 
+            : 'text-gray-600 hover:text-gray-900'
+          }
+        `}
+      >
+        <DocumentTextIcon className="w-4 h-4 mr-2" />
+        Generar Contrato
+      </button>
+      
+      <button
+        onClick={() => setViewMode('templates')}
+        className={`
+          flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+          ${viewMode === 'templates' 
+            ? 'bg-white text-blue-600 shadow-sm' 
+            : 'text-gray-600 hover:text-gray-900'
+          }
+        `}
+      >
+        <ViewColumnsIcon className="w-4 h-4 mr-2" />
+        Ver Plantillas
+      </button>
+
+      {canManageTemplates && (
+        <button
+          onClick={() => setViewMode('management')}
+          className={`
+            flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+            ${viewMode === 'management' 
+              ? 'bg-white text-blue-600 shadow-sm' 
+              : 'text-gray-600 hover:text-gray-900'
+            }
+          `}
+        >
+          <Squares2X2Icon className="w-4 h-4 mr-2" />
+          Gestionar
+        </button>
+      )}
+    </div>
+  );
+
+  const renderContent = () => {
+    switch (viewMode) {
+      case 'generator':
+        return (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Generador de Contratos</h2>
+              <p className="text-gray-600">
+                Seleccione una plantilla y complete la información para generar un contrato.
+              </p>
+              {isLoadingOrg && (
+                <div className="mt-2 text-sm text-blue-600">
+                  Cargando información de la organización...
+                </div>
+              )}
             </div>
-            <p className="text-red-500 mb-4">{(error as Error)?.message || 'Error desconocido'}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Reintentar
-            </button>
+            <ContractGenerator
+              organization={organizationData ? {
+                id: organizationData.id,
+                nombre: organizationData.nombre,
+                rut: organizationData.rut || '',
+                direccion: organizationData.direccion || '',
+                ciudad: organizationData.ciudad,
+                email: organizationData.email,
+                telefono: organizationData.telefono,
+                representanteLegal: organizationData.representanteLegal,
+                rutRepresentanteLegal: organizationData.rutRepresentanteLegal,
+                tipoEntidad: organizationData.tipoEntidad
+              } : undefined}
+              onContractSaved={handleContractSaved}
+              className="mt-6"
+            />
           </div>
-        </div>
-      </div>
-    )
-  }
+        );
+
+      case 'templates':
+        return (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Plantillas Disponibles</h2>
+              <p className="text-gray-600">
+                Explore todas las plantillas de contratos disponibles para su organización.
+              </p>
+            </div>
+            <TemplateSelection
+              onTemplateSelect={(template) => {
+                setSelectedTemplate(template);
+                setViewMode('generator');
+              }}
+              selectedTemplateId={selectedTemplate?.id}
+            />
+          </div>
+        );
+
+      case 'management':
+        return (
+          <div>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Gestión de Plantillas</h2>
+                <p className="text-gray-600">
+                  Administre las plantillas personalizadas de su organización.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  // TODO: Open create template modal
+                  console.log('Create custom template');
+                }}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                <PlusIcon className="w-4 h-4 mr-2" />
+                Nueva Plantilla
+              </button>
+            </div>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+              <div className="flex">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">
+                    Función en Desarrollo
+                  </h3>
+                  <p className="mt-1 text-sm text-yellow-700">
+                    La gestión de plantillas personalizadas estará disponible en una próxima actualización. 
+                    Por ahora puede utilizar las plantillas del sistema disponibles.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-primary-100 p-2 rounded-lg">
-                <DocumentTextIcon className="h-6 w-6 text-primary-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Plantillas de Contratos</h1>
-                <p className="text-gray-600">Crea y gestiona plantillas reutilizables para contratos</p>
-              </div>
-            </div>
-
-            {canManagePlantillas && (
-              <button
-                onClick={handleCreatePlantilla}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2"
-              >
-                <PlusIcon className="h-5 w-5" />
-                <span>Nueva Plantilla</span>
-              </button>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <DocumentTextIcon className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-600">Total Plantillas</p>
-                  <p className="text-2xl font-bold text-gray-900">{plantillas.length}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <DocumentDuplicateIcon className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-600">Plantillas Activas</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {plantillas.filter((p) => p.activa).length}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <FolderIcon className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-600">Categorías</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {new Set(plantillas.map(p => p.categoria)).size}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <MagnifyingGlassIcon className="h-6 w-6 text-orange-600" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-600">Usos Totales</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {plantillas.reduce((sum, p) => sum + p.usos, 0)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Header with Navigation */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Plantillas</h1>
+          <p className="text-gray-600">
+            Gestione plantillas de contratos y genere documentos personalizados.
+          </p>
         </div>
+        {renderTabButtons()}
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Toolbar */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-              {/* Search */}
-              <div className="relative flex-1 max-w-md">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar plantillas..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              {/* View Mode Toggle */}
-              <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`p-2 rounded-lg transition-colors ${
-                    viewMode === 'table'
-                      ? 'bg-white text-primary-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <ListBulletIcon className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('cards')}
-                  className={`p-2 rounded-lg transition-colors ${
-                    viewMode === 'cards'
-                      ? 'bg-white text-primary-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <Squares2X2Icon className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Loading State */}
-          {isLoading && (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Cargando plantillas...</p>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {!isLoading && plantillas.length === 0 && (
-            <div className="p-8 text-center">
-              <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No hay plantillas</h3>
-              <p className="text-gray-600 mb-4">
-                {canManagePlantillas 
-                  ? 'Crea tu primera plantilla para agilizar la creación de contratos'
-                  : 'No hay plantillas disponibles en tu organización'
-                }
-              </p>
-              {canManagePlantillas && (
-                <button
-                  onClick={handleCreatePlantilla}
-                  className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  Crear Primera Plantilla
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Content */}
-          {!isLoading && plantillas.length > 0 && (
-            <div className="p-6">
-              {viewMode === 'table' ? (
-                <div className="text-center py-8 text-gray-500">
-                  Tabla de plantillas - Implementación pendiente
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  Vista de tarjetas - Implementación pendiente
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Coming Soon Features */}
-          {!isLoading && (
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Próximas Funcionalidades</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
-                <div>• Editor de plantillas con campos dinámicos</div>
-                <div>• Categorización y etiquetado</div>
-                <div>• Versionado de plantillas</div>
-                <div>• Compartir plantillas entre organizaciones</div>
-                <div>• Análisis de uso y estadísticas</div>
-                <div>• Plantillas predefinidas del sistema</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {renderContent()}
     </div>
-  )
-}
+  );
+};
 
-export default PlantillaModule
+export default PlantillaModule;
