@@ -11,6 +11,7 @@ import ContraparteModule from './contrapartes/ContraparteModule'
 import UserModule from './usuarios/UserModule'
 import PlantillaModule from './plantillas/PlantillaModule'
 import ConfigurationModule from './configuration/ConfigurationModule'
+import AdminRoute from './admin/AdminRoute'
 import AuditModule from './audit/AuditModule'
 import ProjectModule from './projects/ProjectModule'
 import DashboardLayout from './layout/DashboardLayout'
@@ -40,7 +41,11 @@ const AppRoutes: React.FC = () => {
             <Route path="/contrapartes" element={<ContraparteModule />} />
             <Route path="/usuarios" element={<UserModule />} />
             <Route path="/plantillas" element={<PlantillaModule />} />
-            <Route path="/configuracion" element={<ConfigurationModule />} />
+            <Route path="/configuracion" element={
+              <AdminRoute>
+                <ConfigurationModule />
+              </AdminRoute>
+            } />
             <Route path="/auditoria" element={<AuditModule />} />
             <Route path="/proyectos" element={<ProjectModule />} />
             <Route path="/update-profile" element={<UpdateProfile />} />

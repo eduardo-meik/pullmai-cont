@@ -13,6 +13,8 @@ import {
   BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
+import { useAuthStore } from '../../stores/authStore'
+import { UserRole } from '../../types'
 
 interface SidebarProps {
   isCollapsed?: boolean
@@ -24,6 +26,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapsed 
 }) => {
   const { currentUser } = useAuth()
+  const { usuario } = useAuthStore()
+
+  // Check if user is admin (can access configuration)
+  const isAdmin = usuario?.rol === UserRole.SUPER_ADMIN || usuario?.rol === UserRole.ORG_ADMIN
 
   const navigation = [
     {
@@ -69,7 +75,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   ]
 
   // Show all navigation items for now since we're using Firebase Auth
-  const filteredNavigation = navigation
+  // Filter out configuration for non-admin users
+  const filteredNavigation = navigation.filter(item => {
+    if (item.href === '/configuracion') {
+      return isAdmin
+    }
+    return true
+  })
 
   if (!currentUser) {
     return null
