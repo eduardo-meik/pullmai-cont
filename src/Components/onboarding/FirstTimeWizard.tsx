@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useAuthStore } from '../../stores/authStore'
 import { UserService } from '../../services/userService'
 import { OrganizacionService } from '../../services/organizacionService'
+import { DefaultOrganizationService } from '../../services/defaultOrganizationService'
 import { Organizacion } from '../../types'
 
 interface FirstTimeWizardProps {
@@ -86,9 +87,12 @@ const FirstTimeWizard: React.FC<FirstTimeWizardProps> = ({
       
       // Mark wizard as completed without setting up organization
       if (currentUser && usuario) {
+        // Get the correct MEIK LABS organization ID instead of using the name
+        const defaultOrgId = await DefaultOrganizationService.getDefaultOrganizationId()
+        
         const updatedUser = {
           ...usuario,
-          organizacionId: 'MEIK LABS' // Default organization
+          organizacionId: defaultOrgId // Use proper organization ID
         }
         
         await UserService.updateUserProfile(currentUser.uid, updatedUser)
@@ -118,7 +122,8 @@ const FirstTimeWizard: React.FC<FirstTimeWizardProps> = ({
         throw new Error('Usuario no autenticado')
       }
 
-      let organizationId = 'MEIK LABS' // Default
+      // Get the correct default organization ID instead of using the name
+      let organizationId = await DefaultOrganizationService.getDefaultOrganizationId()
 
       // Create organization if requested
       if (organizationData.createNew && organizationData.nombre.trim()) {

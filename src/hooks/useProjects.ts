@@ -133,10 +133,14 @@ export const useProjectStats = (projectName: string) => {
 }
 
 // Hook para resumen general de proyectos
-export const useProjectsResumen = () => {
+export const useProjectsResumen = (organizacionId?: string) => {
+  const { usuario } = useAuthStore()
+  const orgId = organizacionId || usuario?.organizacionId
+
   return useQuery({
-    queryKey: [CACHE_KEYS.PROJECTS, 'resumen'],
-    queryFn: () => ProjectService.obtenerResumenProyectos(),
+    queryKey: [CACHE_KEYS.PROJECTS, 'resumen', orgId],
+    queryFn: () => ProjectService.obtenerResumenProyectos(orgId),
+    enabled: !!orgId,
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000
   })

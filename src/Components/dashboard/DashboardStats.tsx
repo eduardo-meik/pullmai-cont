@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { useContracts } from '../../hooks/useContracts'
 import { useProjectsResumen } from '../../hooks/useProjects'
+import { useAuthStore } from '../../stores/authStore'
 
 interface StatCardProps {
   title: string
@@ -64,8 +65,9 @@ const StatCard: React.FC<StatCardProps> = ({
 }
 
 const DashboardStats: React.FC = () => {
+  const { usuario } = useAuthStore()
   const contractsQuery = useContracts()
-  const { data: projectStats, isLoading: projectsLoading } = useProjectsResumen()
+  const { data: projectStats, isLoading: projectsLoading } = useProjectsResumen(usuario?.organizacionId)
 
   const contratos = contractsQuery.data?.contratos || []
   const contractsLoading = contractsQuery.isLoading

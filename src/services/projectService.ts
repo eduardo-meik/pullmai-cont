@@ -312,7 +312,7 @@ export class ProjectService {
   }
 
   // Obtener resumen de todos los proyectos
-  static async obtenerResumenProyectos(): Promise<{
+  static async obtenerResumenProyectos(organizacionId?: string): Promise<{
     totalProyectos: number,
     proyectosActivos: number,
     proyectosCompletados: number,
@@ -320,7 +320,9 @@ export class ProjectService {
     proyectosPorEstado: Record<string, number>
   }> {
     try {
-      const proyectos = await this.obtenerProyectos()
+      const proyectos = organizacionId 
+        ? await this.obtenerProyectosPorOrganizacion(organizacionId)
+        : await this.obtenerProyectos()
       
       const totalProyectos = proyectos.length
       const proyectosActivos = proyectos.filter(p => p.estado === EstadoProyecto.EN_CURSO).length

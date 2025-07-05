@@ -34,6 +34,7 @@ interface AuthContextType {
   googleSignin: () => Promise<any>
   githubSignin: () => Promise<any>
   getCurrentUserToken: () => Promise<string | null>
+  refreshUserData: () => Promise<void> // New function to refresh user data
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
@@ -51,7 +52,22 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
   const [loading, setLoading] = useState(true)
   const { setUsuario, logout: logoutFromStore } = useAuthStore()
 
-  function signup(email: string, password: string): Promise<any> {
+  async function signup(email: string, password: string): Promise<any> {
+    // First check if user already exists in Firestore (additional safety)
+    try {
+      const existingUsers = await UserService.getUsersByEmail(email)
+      if (existingUsers.length > 0) {
+        throw new Error('Ya existe una cuenta con este correo electrónico.')
+      }
+    } catch (firestoreError) {
+      // If it's our custom error, re-throw it
+      if (firestoreError instanceof Error && firestoreError.message.includes('Ya existe una cuenta')) {
+        throw firestoreError
+      }
+      // Otherwise, continue with Firebase signup (Firestore check failed, but Firebase will handle duplicates)
+      console.warn('Could not check Firestore for existing users, proceeding with Firebase signup')
+    }
+    
     return createUserWithEmailAndPassword(auth, email, password)
   }
 
@@ -93,36 +109,74 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
 
   function getCurrentUserToken(): Promise<string | null> {
     return currentUser ? currentUser.getIdToken() : Promise.resolve(null)
-  }  useEffect(() => {
+  }
+
+  async function refreshUserData(): Promise<void> {
+    if (!currentUser) return
+    
+    try {
+      console.log('🔄 Manually refreshing user data...')
+      const freshUserProfile = await UserService.getUserProfile(currentUser.uid)
+      if (freshUserProfile) {
+        console.log('✅ Fresh user data loaded:', freshUserProfile)
+        setUsuario(freshUserProfile)
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing user data:', error)
+      throw error
+    }
+  }
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Get user profile or create default one
-        let userProfile = await UserService.getUserProfile(user.uid)
-        
-        if (!userProfile) {
-          userProfile = {
-            id: user.uid,
-            email: user.email || '',
-            nombre: user.displayName?.split(' ')[0] || 'Usuario',
-            apellido: user.displayName?.split(' ').slice(1).join(' ') || '',
-            rol: UserRole.USER,
-            organizacionId: 'MEIK LABS',
-            departamento: 'General',
-            activo: true,
-            fechaCreacion: new Date(),
-            ultimoAcceso: new Date(),
-            permisos: [],
-            asignaciones: []
+        try {
+          // Always fetch fresh user profile from database to avoid cache issues
+          console.log('🔄 Fetching fresh user profile from database...')
+          let userProfile = await UserService.getUserProfile(user.uid)
+          
+          if (!userProfile) {
+            // For new users, check if email already exists in Firestore
+            console.log('👤 Creating new user profile...')
+            
+            // Check for existing user with same email (safety check)
+            const existingUsers = await UserService.getUsersByEmail(user.email || '')
+            if (existingUsers.length > 0) {
+              console.warn('⚠️ User with this email already exists in Firestore, using existing profile')
+              userProfile = existingUsers[0]
+            } else {
+              // Create new user profile
+              userProfile = {
+                id: user.uid,
+                email: user.email || '',
+                nombre: user.displayName?.split(' ')[0] || 'Usuario',
+                apellido: user.displayName?.split(' ').slice(1).join(' ') || '',
+                rol: UserRole.USER,
+                organizacionId: '', // No default organization - user must be assigned
+                departamento: 'General',
+                activo: true,
+                fechaCreacion: new Date(),
+                ultimoAcceso: new Date(),
+                permisos: [],
+                asignaciones: []
+              }
+              
+              await UserService.updateUserProfile(user.uid, userProfile)
+            }
+          } else {
+            console.log('✅ Fresh user profile loaded:', {
+              id: userProfile.id,
+              email: userProfile.email,
+              organizacionId: userProfile.organizacionId,
+              rol: userProfile.rol
+            })
           }
           
-          try {
-            await UserService.updateUserProfile(user.uid, userProfile)
-          } catch (error) {
-            console.error('Error saving default user profile:', error)
-          }
+          setUsuario(userProfile)
+        } catch (error) {
+          console.error('❌ Error loading user profile:', error)
+          // Don't set user if there's an error
         }
-        
-        setUsuario(userProfile)
       } else {
         logoutFromStore()
       }
@@ -145,6 +199,7 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
     updatePassword,
     updateUserProfile,
     getCurrentUserToken,
+    refreshUserData,
   }
 
   return (

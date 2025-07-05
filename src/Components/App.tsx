@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ToastProvider } from '../contexts/ToastContext'
 import { ApiProvider } from '../contexts/ApiContext'
 import AppRoutes from './AppRoutes'
+import DevUserRefreshTool from './dev/DevUserRefreshTool'
 import 'react-toastify/dist/ReactToastify.min.css'
 import AppContextProviders from '../contexts/AppContextProvider'
 
@@ -38,6 +39,7 @@ function App() {
     <Router>
       <AppContextProviders components={providers}>
         <AppRoutes />
+        <DevUserRefreshTool />
       </AppContextProviders>
     </Router>
   )

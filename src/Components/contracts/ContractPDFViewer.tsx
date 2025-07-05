@@ -45,11 +45,11 @@ const ContractPDFViewer: React.FC<ContractPDFViewerProps> = ({
           const storagePath = authenticatedPDFService.extractStoragePath(pdfUrl)
           console.log('Extracted storage path:', storagePath)
           
-          // Get authenticated object URL
-          const objectUrl = await authenticatedPDFService.getPDFObjectUrl(storagePath)
-          console.log('Authenticated PDF object URL obtained:', objectUrl)
+          // Get authenticated URL directly (no blob creation to avoid CORS)
+          const directUrl = await authenticatedPDFService.getPDFViewerUrl(storagePath)
+          console.log('Authenticated PDF URL obtained:', directUrl)
           
-          setAuthenticatedUrl(objectUrl)
+          setAuthenticatedUrl(directUrl)
           setLoading(false)
           
         } catch (error) {
@@ -296,8 +296,8 @@ const ContractPDFViewer: React.FC<ContractPDFViewerProps> = ({
                         const loadAuthenticatedPDF = async () => {
                           try {
                             const storagePath = authenticatedPDFService.extractStoragePath(pdfUrl)
-                            const objectUrl = await authenticatedPDFService.getPDFObjectUrl(storagePath)
-                            setAuthenticatedUrl(objectUrl)
+                            const directUrl = await authenticatedPDFService.getPDFViewerUrl(storagePath)
+                            setAuthenticatedUrl(directUrl)
                             setLoading(false)
                           } catch (error) {
                             console.error('Error loading authenticated PDF:', error)

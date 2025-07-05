@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   XMarkIcon, 
@@ -15,7 +15,6 @@ import { Contrato } from '../../types'
 // import ContractPDFViewer from './ContractPDFViewer' // Will be lazy loaded
 import authenticatedPDFService from '../../services/authenticatedPDFService'
 import LoadingSpinner from '../ui/LoadingSpinner' // For Suspense fallback
-import React, { useState, lazy, Suspense } from 'react' // Added lazy and Suspense
 
 const ContractPDFViewer = lazy(() => import('./ContractPDFViewer'))
 
@@ -278,10 +277,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   const storagePath = authenticatedPDFService.extractStoragePath(contract.pdfUrl)
                                   const authenticatedDownloadUrl = await authenticatedPDFService.getAuthenticatedPDFUrl(storagePath)
                                   
-                                  const link = document.createElement('a')
-                                  link.href = authenticatedDownloadUrl
-                                  link.download = `${contract.titulo}.pdf`
-                                  link.click()
+                                  // Use window.open for download to avoid CORS issues
+                                  window.open(authenticatedDownloadUrl, '_blank')
                                 } catch (error) {
                                   console.error('Error downloading PDF:', error)
                                 }

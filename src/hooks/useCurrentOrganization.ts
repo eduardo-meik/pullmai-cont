@@ -13,6 +13,7 @@ export function useCurrentOrganization() {
       if (!usuario?.organizacionId) {
         console.log('DEBUG: No organizacionId found for user:', usuario)
         setOrganizacion(null)
+        setError('Usuario no asignado a ninguna organización')
         setLoading(false)
         return
       }
@@ -23,6 +24,11 @@ export function useCurrentOrganization() {
         console.log('DEBUG: Fetching organization with ID:', usuario.organizacionId)
         const org = await OrganizacionService.getOrganizacionById(usuario.organizacionId)
         console.log('DEBUG: Fetched organization:', org)
+        
+        if (!org) {
+          setError(`Organización con ID ${usuario.organizacionId} no encontrada`)
+        }
+        
         setOrganizacion(org)
       } catch (err) {
         console.error('Error fetching current organization:', err)

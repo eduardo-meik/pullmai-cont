@@ -1,10 +1,13 @@
-import React from 'react'
+import React, { useState } from 'react'
 import DashboardStats from './dashboard/DashboardStats';
+import DashboardVerification from './dashboard/DashboardVerification';
 import ContractTable from './contracts/ContractTable'
 import FirebaseTestComponent from './FirebaseTestComponent'
 import { checkAndCreateOrganizations } from '../scripts/checkOrganizations'
 
 export default function Dashboard() {
+  const [showVerification, setShowVerification] = useState(false)
+
   const handleCreateOrg = async () => {
     await checkAndCreateOrganizations()
     // Refresh the page to reload organization data
@@ -14,11 +17,19 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">
-          Resumen general de la gestión de contratos
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-2">
+            Resumen general de la gestión de contratos
+          </p>
+        </div>
+        <button
+          onClick={() => setShowVerification(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          Verificar Datos
+        </button>
       </div>
 
       {/* Temporary Organization Setup Button */}
@@ -58,6 +69,11 @@ export default function Dashboard() {
         </h2>
         <ContractTable />
       </div>
+
+      {/* Dashboard Verification Modal */}
+      {showVerification && (
+        <DashboardVerification onClose={() => setShowVerification(false)} />
+      )}
     </div>
   )
 }

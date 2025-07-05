@@ -13,7 +13,7 @@ import pullmaiLogo from '../assets/pullmailogo.svg'
 export default function DashNavbar() {
   const { logout } = useAuth()
   const { showError } = useToast()
-  const { organizacion, loading: orgLoading } = useCurrentOrganization()
+  const { organizacion, loading: orgLoading, error: orgError } = useCurrentOrganization()
   
   // Apply organization branding
   useOrganizationBranding()
@@ -70,9 +70,13 @@ export default function DashNavbar() {
                       <div className="animate-pulse">
                         <div className="h-3 bg-orange-300 rounded w-16"></div>
                       </div>
+                    ) : orgError ? (
+                      <span className="text-red-200 text-xs font-medium">
+                        Sin organización
+                      </span>
                     ) : (
                       <span className="text-white text-xs font-medium">
-                        {organizacion?.nombre || 'Org'}
+                        {organizacion?.nombre || 'Sin org'}
                       </span>
                     )}
                   </div>
@@ -89,9 +93,13 @@ export default function DashNavbar() {
                           <div className="animate-pulse">
                             <div className="h-4 bg-orange-300 rounded w-24"></div>
                           </div>
+                        ) : orgError ? (
+                          <span className="text-red-200 text-sm font-medium">
+                            Sin organización asignada
+                          </span>
                         ) : (
                           <span className="text-gray-200 text-sm font-medium">
-                            {organizacion?.nombre || 'Organización'}
+                            {organizacion?.nombre || 'Sin organización'}
                           </span>
                         )}
                       </div>

@@ -36,7 +36,8 @@ class AuthenticatedPDFService {
   }
 
   /**
-   * Fetch PDF blob with authentication
+   * Fetch PDF blob with authentication - Use this only when you need the blob data
+   * For PDF viewing, prefer using getAuthenticatedPDFUrl directly
    */
   async fetchAuthenticatedPDF(pdfPath: string): Promise<Blob> {
     try {
@@ -45,17 +46,26 @@ class AuthenticatedPDFService {
       // Get authenticated URL
       const authenticatedUrl = await this.getAuthenticatedPDFUrl(pdfPath)
       
-      // Fetch the PDF with the authenticated URL
-      const response = await fetch(authenticatedUrl)
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      // For development environments, we might face CORS issues
+      // Try to fetch, but if it fails due to CORS, we'll handle it gracefully
+      try {
+        const response = await fetch(authenticatedUrl)
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+        
+        const blob = await response.blob()
+        console.log('PDF blob fetched successfully, size:', blob.size)
+        
+        return blob
+      } catch (fetchError) {
+        // If fetch fails (likely due to CORS), throw a more descriptive error
+        if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
+          throw new Error('CORS error: Use getAuthenticatedPDFUrl() for direct PDF viewing instead of fetchAuthenticatedPDF()')
+        }
+        throw fetchError
       }
-      
-      const blob = await response.blob()
-      console.log('PDF blob fetched successfully, size:', blob.size)
-      
-      return blob
       
     } catch (error) {
       console.error('Error fetching authenticated PDF:', error)
@@ -64,10 +74,12 @@ class AuthenticatedPDFService {
   }
 
   /**
-   * Create an object URL for the PDF that can be used in the viewer
+   * Create an object URL for the PDF - DEPRECATED due to CORS issues
+   * Use getAuthenticatedPDFUrl() directly for PDF viewing
    */
   async getPDFObjectUrl(pdfPath: string): Promise<string> {
     try {
+      console.warn('getPDFObjectUrl is deprecated due to CORS issues. Use getAuthenticatedPDFUrl directly.')
       const blob = await this.fetchAuthenticatedPDF(pdfPath)
       const objectUrl = URL.createObjectURL(blob)
       
@@ -76,6 +88,25 @@ class AuthenticatedPDFService {
       
     } catch (error) {
       console.error('Error creating PDF object URL:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get a URL that can be used directly for PDF viewing (recommended method)
+   */
+  async getPDFViewerUrl(pdfPath: string): Promise<string> {
+    try {
+      console.log('Getting PDF viewer URL for:', pdfPath)
+      
+      // Firebase Storage URLs with tokens work directly in PDF viewers
+      const authenticatedUrl = await this.getAuthenticatedPDFUrl(pdfPath)
+      
+      console.log('PDF viewer URL ready:', authenticatedUrl)
+      return authenticatedUrl
+      
+    } catch (error) {
+      console.error('Error getting PDF viewer URL:', error)
       throw error
     }
   }

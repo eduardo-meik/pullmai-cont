@@ -95,7 +95,7 @@ export class UserService {
   static async getUserOrganizationId(uid: string): Promise<string> {
     try {
       const userProfile = await this.getUserProfile(uid)
-      return userProfile?.organizacionId || 'MEIK LABS' // Updated fallback
+      return userProfile?.organizacionId || '' // Return empty string if no organization assigned
     } catch (error) {
       console.error('Error getting user organization:', error)
       return 'MEIK LABS' // Updated fallback
@@ -107,6 +107,29 @@ export class UserService {
    */
   static getDefaultOrganizationId(): string {
     return 'MEIK LABS'
+  }
+
+  /**
+   * Gets users by email address (for duplicate prevention)
+   */
+  static async getUsersByEmail(email: string): Promise<Usuario[]> {
+    try {
+      if (!email) return []
+      
+      const usuariosRef = collection(db, 'usuarios')
+      const q = query(usuariosRef, where('email', '==', email))
+      const querySnapshot = await getDocs(q)
+      
+      const users: Usuario[] = []
+      querySnapshot.forEach((doc) => {
+        users.push({ id: doc.id, ...doc.data() } as Usuario)
+      })
+      
+      return users
+    } catch (error) {
+      console.error('Error getting users by email:', error)
+      return []
+    }
   }
 }
 
