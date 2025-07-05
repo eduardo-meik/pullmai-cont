@@ -19,12 +19,9 @@ export const TemplateForm: React.FC<TemplateFormProps> = ({
   const [errors, setErrors] = useState<{ [fieldId: string]: string }>({});
 
   useEffect(() => {
-    console.log('TemplateForm useEffect triggered', { templateId: template?.id });
-    
     // Safe auto-fill implementation without async operations
     if (autoFillData && template) {
       try {
-        console.log('Processing auto-fill synchronously');
         const autoFilledData: TemplateFormData = {};
 
         // Process each field with auto-fill
@@ -37,19 +34,15 @@ export const TemplateForm: React.FC<TemplateFormProps> = ({
           }
         });
 
-        console.log('Auto-fill completed', { autoFilledData });
         const mergedData = { ...autoFilledData, ...initialData };
-        
         setFormData(mergedData);
         onFormDataChange(mergedData);
-        console.log('Form data updated successfully');
       } catch (error) {
         console.error('Error in auto-fill:', error);
         setFormData(initialData);
         onFormDataChange(initialData);
       }
     } else {
-      console.log('No auto-fill needed, using initial data');
       setFormData(initialData);
       onFormDataChange(initialData);
     }
