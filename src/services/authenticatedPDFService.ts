@@ -112,10 +112,16 @@ class AuthenticatedPDFService {
   }
 
   /**
-   * Extract the Firebase Storage path from a full URL
+   * Extract the Firebase Storage path from a full URL or return the path if it's already a path
    */
   extractStoragePath(url: string): string {
     try {
+      // If the input is already a path (doesn't start with http/https), return it as-is
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        console.log('Input is already a storage path:', url);
+        return url;
+      }
+
       // Create a URL object to easily access parts of the URL
       const urlObj = new URL(url);
       
