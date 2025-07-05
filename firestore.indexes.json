@@ -125,7 +125,7 @@
       ]
     },
     {
-      "collectionGroup": "auditEvents",
+      "collectionGroup": "registros_auditoria",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -133,13 +133,13 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "timestamp",
+          "fieldPath": "fecha",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "auditEvents",
+      "collectionGroup": "registros_auditoria",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -147,17 +147,17 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "action",
+          "fieldPath": "accion",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "timestamp",
+          "fieldPath": "fecha",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "auditEvents",
+      "collectionGroup": "registros_auditoria",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -165,47 +165,39 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "resource",
+          "fieldPath": "recurso",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "timestamp",
+          "fieldPath": "fecha",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "auditEvents",
+      "collectionGroup": "registros_auditoria",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "organizacionId",
+          "fieldPath": "contratoId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "riskLevel",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
+          "fieldPath": "fecha",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "auditEvents",
+      "collectionGroup": "registros_auditoria",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "organizacionId",
+          "fieldPath": "usuarioId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
+          "fieldPath": "fecha",
           "order": "DESCENDING"
         }
       ]

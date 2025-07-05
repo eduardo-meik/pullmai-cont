@@ -1,6 +1,7 @@
 import { FaGithub, FaGoogle } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useEffect, useState } from 'react'
 
 export interface ISocialSignInProps {
   enabled?: boolean
@@ -8,14 +9,22 @@ export interface ISocialSignInProps {
 }
 
 export function SocialSignIn({ enabled = true, setError }: ISocialSignInProps) {
-  const { googleSignin, githubSignin } = useAuth()
+  const { googleSignin, githubSignin, currentUser } = useAuth()
   const navigate = useNavigate()
+  const [loginAttempted, setLoginAttempted] = useState(false)
+
+  // Navigate to dashboard when user is authenticated
+  useEffect(() => {
+    if (currentUser && loginAttempted) {
+      navigate('/')
+    }
+  }, [currentUser, loginAttempted, navigate])
 
   async function handleGoogleLogin(): Promise<void> {
     try {
       setError('')
       await googleSignin()
-      navigate('/')
+      setLoginAttempted(true)
     } catch {
       setError('Failed to log in with Google')
     }
@@ -25,7 +34,7 @@ export function SocialSignIn({ enabled = true, setError }: ISocialSignInProps) {
     try {
       setError('')
       await githubSignin()
-      navigate('/')
+      setLoginAttempted(true)
     } catch (err) {
       console.log(err)
       setError('Failed to log in with GitHub')

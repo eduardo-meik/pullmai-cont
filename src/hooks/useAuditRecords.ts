@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { RegistroAuditoria, AccionAuditoria } from '../types'
+import { AuditService } from '../services/auditService'
+import { useAuthStore } from '../stores/authStore'
 
 interface UseAuditRecordsParams {
   searchTerm?: string
@@ -29,6 +31,10 @@ export const useAuditRecords = (params: UseAuditRecordsParams): UseAuditRecordsR
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
+  
+  // Get the current user from the auth store
+  const { usuario } = useAuthStore()
+  const auditService = AuditService.getInstance()
 
   // Memoize params to prevent infinite re-renders
   const stableParams = useMemo(() => ({
@@ -48,24 +54,48 @@ export const useAuditRecords = (params: UseAuditRecordsParams): UseAuditRecordsR
   ])
 
   const loadRecords = useCallback(async () => {
+    // Don't load if no user is authenticated
+    if (!usuario) {
+      setRecords([])
+      setTotalRecords(0)
+      setTotalPages(1)
+      setCurrentPage(1)
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
       
-      // For now, return empty results since the service requires a full Usuario object
-      // This can be implemented later when the user context is properly typed
-      setRecords([])
-      setTotalRecords(0)
-      setTotalPages(1)
+      // Prepare filters for the audit service
+      const filters: any = {}
+      if (stableParams.contratoId) filters.contratoId = stableParams.contratoId
+      if (stableParams.usuarioId) filters.usuarioId = stableParams.usuarioId
+      if (stableParams.accion) filters.accion = stableParams.accion
+      if (stableParams.fechaInicio) filters.fechaInicio = new Date(stableParams.fechaInicio)
+      if (stableParams.fechaFin) filters.fechaFin = new Date(stableParams.fechaFin)
+      if (stableParams.searchTerm) filters.searchTerm = stableParams.searchTerm
+      
+      // Call the audit service with the current user and filters
+      const result = await auditService.getAuditRecords(usuario, filters, 50)
+      
+      setRecords(result.records)
+      setTotalRecords(result.records.length)
+      setTotalPages(Math.max(1, Math.ceil(result.records.length / 50)))
       setCurrentPage(1)
       
     } catch (err) {
       console.error('Error loading audit records:', err)
       setError(err instanceof Error ? err.message : 'Error al cargar registros de auditoría')
+      setRecords([])
+      setTotalRecords(0)
+      setTotalPages(1)
+      setCurrentPage(1)
     } finally {
       setLoading(false)
     }
-  }, [stableParams])
+  }, [stableParams, usuario, auditService])
 
   const nextPage = useCallback(() => {
     if (currentPage < totalPages) {

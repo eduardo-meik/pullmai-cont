@@ -5,13 +5,18 @@ import {
   AdjustmentsHorizontalIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { useAuthStore } from '../../stores/authStore'
 import { useAuditRecords } from '../../hooks/useAuditRecords'
 import { formatDateTime } from '../../utils/dateUtils'
 import { RegistroAuditoria, AccionAuditoria } from '../../types'
+import { AuditService } from '../../services/auditService'
 
 const AuditModule: React.FC = () => {
   const { currentUser } = useAuth()
+  const { usuario } = useAuthStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedAction, setSelectedAction] = useState<AccionAuditoria | ''>('')
   const [contratoId, setContratoId] = useState('')
@@ -19,6 +24,7 @@ const AuditModule: React.FC = () => {
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [isCreatingTestRecord, setIsCreatingTestRecord] = useState(false)
 
   // Memoize the params object to prevent infinite re-renders
   const auditParams = useMemo(() => ({
@@ -67,6 +73,68 @@ const AuditModule: React.FC = () => {
     setUsuarioId('')
     setFechaInicio('')
     setFechaFin('')
+  }
+
+  const createTestAuditRecord = async () => {
+    if (!usuario || !currentUser) {
+      alert('Usuario no autenticado')
+      return
+    }
+
+    setIsCreatingTestRecord(true)
+    try {
+      const auditService = AuditService.getInstance()
+      
+      // First, ensure the user exists in the usuarios collection
+      try {
+        const userDoc = await getDoc(doc(db, 'usuarios', usuario.id))
+        if (!userDoc.exists()) {
+          await setDoc(doc(db, 'usuarios', usuario.id), {
+            nombre: usuario.nombre,
+            apellido: usuario.apellido || '',
+            email: usuario.email,
+            rol: usuario.rol,
+            organizacionId: usuario.organizacionId,
+            departamento: usuario.departamento,
+            activo: true,
+            fechaCreacion: new Date(),
+            ultimoAcceso: new Date()
+          })
+          console.log('Test user created in usuarios collection')
+        }
+      } catch (userError) {
+        console.warn('Error creating/checking user:', userError)
+      }
+      
+      // Create a test audit record with a real contract ID if available
+      // For testing purposes, we'll use a placeholder contract ID
+      const testContractId = 'test-contract-001'
+      
+      await auditService.createAuditRecord(
+        usuario.id,
+        AccionAuditoria.VISUALIZACION,
+        `Registro de prueba - Acceso al módulo de auditoría por ${usuario.nombre}`,
+        testContractId, // Include a contract ID for testing
+        {
+          origen: 'test',
+          organizacion: usuario.organizacionId,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          ipAddress: 'test-ip'
+        }
+      )
+      
+      // Reload records to show the new one
+      await new Promise(resolve => setTimeout(resolve, 1000)) // Small delay to ensure record is created
+      loadRecords()
+      alert('Registro de auditoría de prueba creado exitosamente!')
+      
+    } catch (error) {
+      console.error('Error creating test audit record:', error)
+      alert('Error al crear el registro de prueba: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+    } finally {
+      setIsCreatingTestRecord(false)
+    }
   }
 
   const getActionLabel = (action: AccionAuditoria): string => {
@@ -131,6 +199,21 @@ const AuditModule: React.FC = () => {
     return false
   }
 
+  // Load records on mount
+  useEffect(() => {
+    loadRecords()
+  }, [loadRecords])
+
+  // Debug logging
+  useEffect(() => {
+    console.log('AuditModule Debug Info:')
+    console.log('currentUser:', currentUser)
+    console.log('usuario from store:', usuario)
+    console.log('records:', records)
+    console.log('loading:', loading)
+    console.log('error:', error)
+  }, [currentUser, usuario, records, loading, error])
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -148,6 +231,22 @@ const AuditModule: React.FC = () => {
                 </p>
               </div>
             </div>
+            
+            {/* Debug: Test button to create audit records */}
+            {usuario && (
+              <div className="flex items-center space-x-3">
+                <div className="text-sm text-gray-600">
+                  Usuario: {usuario.nombre} ({usuario.organizacionId})
+                </div>
+                <button
+                  onClick={createTestAuditRecord}
+                  disabled={isCreatingTestRecord}
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCreatingTestRecord ? 'Creando...' : 'Crear Registro Prueba'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -404,11 +503,23 @@ const AuditModule: React.FC = () => {
                       <span className="text-sm text-gray-500">
                         {formatDateTime(record.fecha)}
                       </span>
+                      {(record.contratoContraparte || record.organizacionNombre) && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                          Contraparte: {record.contratoContraparte || record.organizacionNombre}
+                        </span>
+                      )}
                     </div>
                     {shouldShowUserDetails(record) && (
-                      <span className="text-sm text-gray-500">
-                        Usuario: {record.usuarioId}
-                      </span>
+                      <div className="flex flex-col items-end text-sm text-gray-500">
+                        <span className="font-medium">
+                          {record.usuarioNombre || `Usuario: ${record.usuarioId}`}
+                        </span>
+                        {record.usuarioEmail && (
+                          <span className="text-xs text-gray-400">
+                            {record.usuarioEmail}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -422,12 +533,17 @@ const AuditModule: React.FC = () => {
                     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3 text-xs text-gray-500">
                       {record.contratoId && (
                         <div>
-                          <span className="font-medium">Contrato:</span> {record.contratoId}
+                          <span className="font-medium">Contrato:</span> 
+                          {record.contratoTitulo ? (
+                            <span className="ml-1">{record.contratoTitulo}</span>
+                          ) : (
+                            <span className="ml-1 text-gray-400">{record.contratoId}</span>
+                          )}
                         </div>
                       )}
-                      {record.metadatos?.proyectoId && (
+                      {record.contratoProyecto && (
                         <div>
-                          <span className="font-medium">Proyecto:</span> {record.metadatos.proyectoId}
+                          <span className="font-medium">Proyecto:</span> {record.contratoProyecto}
                         </div>
                       )}
                       {record.metadatos?.contraparteId && (

@@ -2,12 +2,13 @@
   collection,
   doc,
   getDocs,
+  addDoc,
+  Timestamp,
   query,
   where,
   orderBy,
   limit,
   startAfter,
-  Timestamp,
   DocumentData,
   QueryDocumentSnapshot
 } from 'firebase/firestore'
@@ -41,6 +42,7 @@ export class AuditService {
       fechaFin?: Date
       accion?: string
       usuarioId?: string
+      searchTerm?: string
     },
     pageSize = 50,
     lastDoc?: QueryDocumentSnapshot<DocumentData>
@@ -50,104 +52,118 @@ export class AuditService {
     lastDoc: QueryDocumentSnapshot<DocumentData> | null
   }> {
     try {
-      let baseQuery = collection(db, this.collection)
-      const constraints: any[] = []
+      let records: RegistroAuditoria[] = []
 
-      // Aplicar filtros según el rol del usuario
+      // Simplified approach: Use single queries with proper indexes
       if (currentUser.rol === UserRole.SUPER_ADMIN) {
-        // SUPER_ADMIN puede ver todo
-        // No agregar restricciones adicionales
-      } else {
-        // Para todos los demás roles, primero obtenemos los contratos de su organización
-        // para luego filtrar los registros de auditoría
+        // SUPER_ADMIN puede ver todo - simple query
+        const constraints: any[] = [orderBy('fecha', 'desc'), limit(pageSize)]
         
-        // Obtener contratos de la organización del usuario actual
+        // Apply specific filters if provided
+        if (filters?.contratoId) {
+          constraints.splice(0, 0, where('contratoId', '==', filters.contratoId))
+        }
+        if (filters?.usuarioId) {
+          constraints.splice(0, 0, where('usuarioId', '==', filters.usuarioId))
+        }
+        if (filters?.accion) {
+          constraints.splice(0, 0, where('accion', '==', filters.accion))
+        }
+        
+        const q = query(collection(db, this.collection), ...constraints)
+        const querySnapshot = await getDocs(q)
+        
+        records = querySnapshot.docs.map(doc => {
+          const data = doc.data()
+          return {
+            id: doc.id,
+            ...data,
+            fecha: data.fecha?.toDate() || new Date()
+          } as RegistroAuditoria
+        })
+
+        // Enrich records with user and organization information
+        records = await this.enrichRecordsWithUserInfo(records)
+        
+      } else {
+        // For other roles, get all records and filter on the client side to avoid complex queries
+        // This is acceptable for demo purposes. In production, consider using Cloud Functions for complex filtering
+        
+        const constraints: any[] = [orderBy('fecha', 'desc'), limit(200)] // Get more records to filter
+        
+        // Apply specific filters if provided to reduce the dataset
+        if (filters?.contratoId) {
+          constraints.splice(0, 0, where('contratoId', '==', filters.contratoId))
+        }
+        if (filters?.usuarioId) {
+          constraints.splice(0, 0, where('usuarioId', '==', filters.usuarioId))
+        }
+        if (filters?.accion) {
+          constraints.splice(0, 0, where('accion', '==', filters.accion))
+        }
+        
+        const q = query(collection(db, this.collection), ...constraints)
+        const querySnapshot = await getDocs(q)
+        
+        let allRecords = querySnapshot.docs.map(doc => {
+          const data = doc.data()
+          return {
+            id: doc.id,
+            ...data,
+            fecha: data.fecha?.toDate() || new Date()
+          } as RegistroAuditoria
+        })
+
+        // Enrich records with user and organization information
+        allRecords = await this.enrichRecordsWithUserInfo(allRecords)
+        
+        // Client-side filtering based on organization
+        // Get contract IDs for the user's organization
         const contractsQuery = query(
           collection(db, 'contratos'),
           where('organizacionId', '==', currentUser.organizacionId)
         )
         
         const contractsSnapshot = await getDocs(contractsQuery)
-        const contractIds = contractsSnapshot.docs.map(doc => doc.id)
+        const contractIds = new Set(contractsSnapshot.docs.map(doc => doc.id))
         
-        if (contractIds.length === 0) {
-          // Si no hay contratos en la organización, solo mostrar registros del usuario
-          constraints.push(where('usuarioId', '==', currentUser.id))
-        } else {
-          // Filtrar por contratos de la organización
-          // Firestore 'in' query has a limit of 10 items, so we'll chunk if needed
-          if (contractIds.length <= 10) {
-            constraints.push(where('contratoId', 'in', contractIds))
-          } else {
-            // For more than 10 contracts, we'll need to do multiple queries
-            // For now, let's limit to first 10 contracts
-            constraints.push(where('contratoId', 'in', contractIds.slice(0, 10)))
-          }
+        // Filter records: show user's own records + records from organization's contracts
+        allRecords = allRecords.filter(record => 
+          record.usuarioId === currentUser.id || 
+          (record.contratoId && contractIds.has(record.contratoId))
+        )
+        
+        // Apply date filters on client side
+        if (filters?.fechaInicio) {
+          allRecords = allRecords.filter(record => record.fecha >= filters.fechaInicio!)
         }
-
-        // Aplicar filtros adicionales según el rol
-        if (currentUser.rol === UserRole.USER) {
-          // USER solo puede ver registros donde él es el usuario O de contratos donde participa
-          // Como ya filtramos por contratos de la organización, dejamos así
-        } else if (currentUser.rol === UserRole.MANAGER) {
-          // MANAGER puede ver todos los registros de los contratos de la organización
-          // Ya está filtrado por arriba
-        } else if (currentUser.rol === UserRole.ORG_ADMIN) {
-          // ORG_ADMIN puede ver todos los registros de la organización
-          // Ya está filtrado por arriba
+        if (filters?.fechaFin) {
+          allRecords = allRecords.filter(record => record.fecha <= filters.fechaFin!)
         }
+        
+        // Paginate on client side
+        const startIndex = 0 // Simplified pagination for now
+        records = allRecords.slice(startIndex, startIndex + pageSize)
       }
 
-      // Aplicar filtros adicionales
-      if (filters?.contratoId) {
-        // Si se especifica un contrato específico, sobrescribir el filtro anterior
-        constraints.length = 0 // Clear previous constraints
-        constraints.push(where('contratoId', '==', filters.contratoId))
-      }
-      
-      if (filters?.usuarioId && (currentUser.rol === UserRole.ORG_ADMIN || currentUser.rol === UserRole.SUPER_ADMIN)) {
-        constraints.push(where('usuarioId', '==', filters.usuarioId))
-      }
-
-      if (filters?.accion) {
-        constraints.push(where('accion', '==', filters.accion))
+      // Apply search term filtering on client side if provided
+      if (filters?.searchTerm && filters.searchTerm.trim()) {
+        const searchLower = filters.searchTerm.toLowerCase()
+        records = records.filter(record =>
+          record.descripcion.toLowerCase().includes(searchLower) ||
+          record.accion.toLowerCase().includes(searchLower) ||
+          record.usuarioId.toLowerCase().includes(searchLower) ||
+          (record.contratoId && record.contratoId.toLowerCase().includes(searchLower))
+        )
       }
 
-      if (filters?.fechaInicio) {
-        constraints.push(where('fecha', '>=', Timestamp.fromDate(filters.fechaInicio)))
-      }
-
-      if (filters?.fechaFin) {
-        constraints.push(where('fecha', '<=', Timestamp.fromDate(filters.fechaFin)))
-      }
-
-      // Ordenar por fecha descendente
-      constraints.push(orderBy('fecha', 'desc'))
-      constraints.push(limit(pageSize))
-
-      if (lastDoc) {
-        constraints.push(startAfter(lastDoc))
-      }
-
-      const q = query(baseQuery, ...constraints)
-      const querySnapshot = await getDocs(q)
-      
-      const records: RegistroAuditoria[] = querySnapshot.docs.map(doc => {
-        const data = doc.data()
-        return {
-          id: doc.id,
-          ...data,
-          fecha: data.fecha?.toDate() || new Date()
-        } as RegistroAuditoria
-      })
-
-      // Filtrar detalles según el rol
-      const filteredRecords = this.filterRecordsByRole(records, currentUser)
+      // Aplicar filtros según el rol del usuario
+      records = this.filterRecordsByRole(records, currentUser)
 
       return {
-        records: filteredRecords,
-        hasMore: querySnapshot.docs.length === pageSize,
-        lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1] || null
+        records,
+        hasMore: false, // Simplified for now
+        lastDoc: null
       }
     } catch (error) {
       console.error('Error al obtener registros de auditoría:', error)
@@ -305,6 +321,143 @@ export class AuditService {
     } catch (error) {
       console.error('Error al obtener estadísticas de auditoría:', error)
       throw error
+    }
+  }
+
+  /**
+   * Crea un nuevo registro de auditoría
+   */
+  async createAuditRecord(
+    usuarioId: string,
+    accion: string,
+    descripcion: string,
+    contratoId?: string,
+    metadatos?: any
+  ): Promise<string> {
+    try {
+      const registroAuditoria = {
+        usuarioId,
+        accion,
+        descripcion,
+        fecha: Timestamp.now(),
+        contratoId: contratoId || null,
+        metadatos: metadatos || {}
+      }
+
+      const docRef = await addDoc(collection(db, this.collection), registroAuditoria)
+      return docRef.id
+    } catch (error) {
+      console.error('Error al crear registro de auditoría:', error)
+      throw new Error('Error al crear el registro de auditoría')
+    }
+  }
+
+  /**
+   * Enriquece los registros de auditoría con información de usuarios y organizaciones
+   */
+  private async enrichRecordsWithUserInfo(records: RegistroAuditoria[]): Promise<RegistroAuditoria[]> {
+    if (records.length === 0) return records
+
+    try {
+      // Get unique user IDs and contract IDs
+      const userIds = [...new Set(records.map(r => r.usuarioId).filter(Boolean))]
+      const contractIds = [...new Set(records.map(r => r.contratoId).filter(Boolean))]
+
+      // Fetch users information
+      const usersMap = new Map<string, any>()
+      if (userIds.length > 0) {
+        // Batch fetch users (up to 10 at a time due to Firestore 'in' query limit)
+        const batchSize = 10
+        for (let i = 0; i < userIds.length; i += batchSize) {
+          const batch = userIds.slice(i, i + batchSize)
+          try {
+            const usersQuery = query(
+              collection(db, 'usuarios'),
+              where('__name__', 'in', batch)
+            )
+            const usersSnapshot = await getDocs(usersQuery)
+            usersSnapshot.forEach(doc => {
+              usersMap.set(doc.id, { id: doc.id, ...doc.data() })
+            })
+          } catch (error) {
+            console.warn('Error fetching users batch:', error)
+          }
+        }
+      }
+
+      // Fetch contracts and organizations information
+      const contractsMap = new Map<string, any>()
+      const organizationsMap = new Map<string, any>()
+      
+      if (contractIds.length > 0) {
+        // Batch fetch contracts
+        const batchSize = 10
+        for (let i = 0; i < contractIds.length; i += batchSize) {
+          const batch = contractIds.slice(i, i + batchSize)
+          try {
+            const contractsQuery = query(
+              collection(db, 'contratos'),
+              where('__name__', 'in', batch)
+            )
+            const contractsSnapshot = await getDocs(contractsQuery)
+            contractsSnapshot.forEach(doc => {
+              const contractData = { id: doc.id, ...doc.data() } as any
+              contractsMap.set(doc.id, contractData)
+              
+              // Also collect organization IDs from contracts
+              if (contractData.organizacionId) {
+                organizationsMap.set(contractData.organizacionId, null) // Mark for loading
+              }
+            })
+          } catch (error) {
+            console.warn('Error fetching contracts batch:', error)
+          }
+        }
+
+        // Fetch organizations
+        const orgIds = Array.from(organizationsMap.keys())
+        if (orgIds.length > 0) {
+          const batchSize = 10
+          for (let i = 0; i < orgIds.length; i += batchSize) {
+            const batch = orgIds.slice(i, i + batchSize)
+            try {
+              const orgsQuery = query(
+                collection(db, 'organizaciones'),
+                where('__name__', 'in', batch)
+              )
+              const orgsSnapshot = await getDocs(orgsQuery)
+              orgsSnapshot.forEach(doc => {
+                organizationsMap.set(doc.id, { id: doc.id, ...doc.data() })
+              })
+            } catch (error) {
+              console.warn('Error fetching organizations batch:', error)
+            }
+          }
+        }
+      }
+
+      // Enrich records with the fetched information
+      return records.map(record => {
+        const user = usersMap.get(record.usuarioId)
+        const contract = contractsMap.get(record.contratoId || '')
+        const organization = contract ? organizationsMap.get(contract.organizacionId) : null
+
+        return {
+          ...record,
+          // Add enriched user information
+          usuarioNombre: user ? `${user.nombre} ${user.apellido || ''}`.trim() : record.usuarioId,
+          usuarioEmail: user?.email,
+          // Add enriched organization information
+          organizacionNombre: organization?.nombre,
+          contratoTitulo: contract?.titulo,
+          contratoProyecto: contract?.proyecto,
+          contratoContraparte: contract?.contraparte
+        }
+      })
+
+    } catch (error) {
+      console.warn('Error enriching records with user info:', error)
+      return records // Return original records if enrichment fails
     }
   }
 }

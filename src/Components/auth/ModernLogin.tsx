@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { EnvelopeIcon, LockClosedIcon, UserIcon } from '@heroicons/react/24/outline'
 import Input from '../ui/Input'
@@ -17,12 +17,20 @@ interface FormErrors {
 const ModernLogin: React.FC = () => {
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
-  const { login, googleSignin, githubSignin } = useAuth()
+  const { login, googleSignin, githubSignin, currentUser } = useAuth()
   const [errors, setErrors] = useState<FormErrors>({})
   const [loading, setLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
   const [rememberMe, setRememberMe] = useState(false)
+  const [loginAttempted, setLoginAttempted] = useState(false)
   const navigate = useNavigate()
+
+  // Navigate to dashboard when user is authenticated
+  useEffect(() => {
+    if (currentUser && loginAttempted) {
+      navigate('/')
+    }
+  }, [currentUser, loginAttempted, navigate])
 
   const validateEmail = (email: string): string | undefined => {
     if (!email) return 'El correo electrónico es obligatorio'
@@ -91,7 +99,9 @@ const ModernLogin: React.FC = () => {
       }
       
       await login(email, password)
-      navigate('/')
+      setLoginAttempted(true)
+      // Don't navigate immediately - let the auth state change handle navigation
+      // This prevents the double login issue
     } catch (error: any) {
       console.error('Login error:', error)
       const errorMessage = getFirebaseErrorMessage(error.code)
@@ -119,7 +129,8 @@ const ModernLogin: React.FC = () => {
         await githubSignin()
       }
       
-      navigate('/')
+      setLoginAttempted(true)
+      // Don't navigate immediately - let the useEffect handle navigation
     } catch (error: any) {
       console.error(`${provider} login error:`, error)
       let errorMessage = getFirebaseErrorMessage(error.code)

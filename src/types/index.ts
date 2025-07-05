@@ -159,6 +159,13 @@ export interface RegistroAuditoria {
   metadatos?: Record<string, any>
   ipAddress?: string
   userAgent?: string
+  // Campos enriquecidos (agregados por el servicio)
+  usuarioNombre?: string
+  usuarioEmail?: string
+  organizacionNombre?: string
+  contratoTitulo?: string
+  contratoProyecto?: string
+  contratoContraparte?: string
 }
 
 export enum AccionAuditoria {
