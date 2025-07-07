@@ -74,25 +74,6 @@ class AuthenticatedPDFService {
   }
 
   /**
-   * Create an object URL for the PDF - DEPRECATED due to CORS issues
-   * Use getAuthenticatedPDFUrl() directly for PDF viewing
-   */
-  async getPDFObjectUrl(pdfPath: string): Promise<string> {
-    try {
-      console.warn('getPDFObjectUrl is deprecated due to CORS issues. Use getAuthenticatedPDFUrl directly.')
-      const blob = await this.fetchAuthenticatedPDF(pdfPath)
-      const objectUrl = URL.createObjectURL(blob)
-      
-      console.log('PDF object URL created:', objectUrl)
-      return objectUrl
-      
-    } catch (error) {
-      console.error('Error creating PDF object URL:', error)
-      throw error
-    }
-  }
-
-  /**
    * Get a URL that can be used directly for PDF viewing (recommended method)
    */
   async getPDFViewerUrl(pdfPath: string): Promise<string> {
