@@ -13,6 +13,8 @@ export interface Usuario {
   permisos: string[]
   // Nuevos campos para el sistema de asignaciones
   asignaciones?: UserAssignment[]
+  // Campo para embedding del perfil de usuario (si se decide indexar usuarios)
+  embedding_openai_t3s?: number[]
 }
 
 // Interfaz para asignaciones específicas de usuarios (importada desde roles.ts)
@@ -102,6 +104,14 @@ export interface Contrato {
   etiquetas: string[]
   metadatos: Record<string, any>
   auditoria: RegistroAuditoria[]
+
+  // Campos para embeddings
+  embedding_openai_t3s?: number[] // Embedding del texto principal del contrato
+  pdfChunks?: Array<{
+    text: string; // Texto original del chunk
+    pageNumber: number; // Página de origen del chunk
+    embedding_openai_t3s: number[]; // Embedding del chunk
+  }>
 }
 
 // Mantenido para compatibilidad con código existente
@@ -143,6 +153,7 @@ export interface Organizacion {
   branding?: BrandingConfig
   fechaCreacion: Date
   activa: boolean
+  embedding_openai_t3s?: number[] // Embedding del texto principal de la organización
 }
 
 export interface BrandingConfig {
@@ -339,6 +350,7 @@ export interface Proyecto {
   fechaUltimaModificacion: Date
   modificadoPor: string
   version: number
+  embedding_openai_t3s?: number[] // Embedding del texto principal del proyecto
 }
 
 // Estadísticas agregadas por proyecto
