@@ -10,7 +10,8 @@ import {
   BriefcaseIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  ChatBubbleOvalLeftEllipsisIcon // Added Chat icon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAuthStore } from '../../stores/authStore'
@@ -36,6 +37,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       name: 'Panel de Control',
       href: '/',
       icon: ChartBarIcon,
+    },
+    {
+      name: 'Chat AI', // New Chat Link
+      href: '/chat',
+      icon: ChatBubbleOvalLeftEllipsisIcon,
     },
     {
       name: 'Proyectos',

@@ -31,6 +31,7 @@ const ProjectList = lazy(() => import('./projects/ProjectList'))
 const ProjectDetail = lazy(() => import('./projects/ProjectDetail'))
 const TermsAndConditions = lazy(() => import('./legal/TermsAndConditions'))
 const PrivacyPolicy = lazy(() => import('./legal/PrivacyPolicy'))
+const ChatPage = lazy(() => import('./Chat/ChatPage')) // Added ChatPage import
 
 /**
  * AppRoutes component that handles routing and wizard display
@@ -63,6 +64,7 @@ const AppRoutes: React.FC = () => {
               <Route path="/update-profile" element={<UpdateProfile />} />
               <Route path="/projects" element={<ProjectList />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
+              <Route path="/chat" element={<ChatPage />} /> {/* Added ChatPage Route */}
             </Route>
           </Route>
           <Route path="/signup" element={<Signup />} />
