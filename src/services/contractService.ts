@@ -87,6 +87,8 @@ export class ContractService {
       const contratos = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
+        // Normalize estado to lowercase to match enum
+        estado: doc.data().estado?.toLowerCase() || 'borrador',
         fechaCreacion: doc.data().fechaCreacion?.toDate(),
         fechaInicio: doc.data().fechaInicio?.toDate(),
         fechaTermino: doc.data().fechaTermino?.toDate()
@@ -359,6 +361,8 @@ export class ContractService {
       const contratos = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
+        // Normalize estado to lowercase to match enum
+        estado: doc.data().estado?.toLowerCase() || 'borrador',
         fechaCreacion: doc.data().fechaCreacion?.toDate(),
         fechaInicio: doc.data().fechaInicio?.toDate(),
         fechaTermino: doc.data().fechaTermino?.toDate()

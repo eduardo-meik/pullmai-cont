@@ -31,6 +31,8 @@ function convertFirestoreContract(doc: any): Contrato {
   return {
     id: doc.id,
     ...data,
+    // Normalize estado to lowercase to match enum
+    estado: data.estado?.toLowerCase() || 'borrador',
     fechaCreacion: convertTimestampToDate(data.fechaCreacion),
     fechaInicio: convertTimestampToDate(data.fechaInicio),
     fechaTermino: convertTimestampToDate(data.fechaTermino),

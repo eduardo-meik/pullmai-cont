@@ -118,6 +118,8 @@ export class ProjectService {
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
+        // Normalize estado to lowercase to match enum
+        estado: doc.data().estado?.toLowerCase() || EstadoContrato.BORRADOR,
         fechaInicio: doc.data().fechaInicio?.toDate() || new Date(),
         fechaTermino: doc.data().fechaTermino?.toDate() || new Date(),
         fechaCreacion: doc.data().fechaCreacion?.toDate() || new Date()
@@ -145,10 +147,17 @@ export class ProjectService {
         return diasParaVencer <= 30 && diasParaVencer > 0
       }).length
       
-      // Contratos vencidos
+      // Contratos vencidos (solo por fecha)
       const contratosVencidos = contratos.filter(c => {
         return c.fechaTermino < hoy && c.estado !== EstadoContrato.RENOVADO
       }).length
+      
+      // Contratos finalizados (estados terminales)
+      const contratosFinalizados = contratos.filter(c => 
+        c.estado === EstadoContrato.VENCIDO || 
+        c.estado === EstadoContrato.CANCELADO || 
+        c.estado === EstadoContrato.RENOVADO
+      ).length
       
       // Valores financieros
       const valorTotal = contratos.reduce((sum, c) => sum + c.monto, 0)
@@ -182,6 +191,7 @@ export class ProjectService {
         contratosActivos,
         contratosPorVencer,
         contratosVencidos,
+        contratosFinalizados,
         valorTotal,
         valorActivo,
         ingresos,
@@ -228,6 +238,7 @@ export class ProjectService {
       contratosActivos: 0,
       contratosPorVencer: 0,
       contratosVencidos: 0,
+      contratosFinalizados: 0,
       valorTotal: 0,
       valorActivo: 0,
       ingresos: 0,

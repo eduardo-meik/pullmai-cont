@@ -24,7 +24,7 @@ const ProjectDetail: React.FC = () => {
   const { data: contratos } = useProjectContracts(proyecto?.nombre || '')
   const { data: estadisticas } = useProjectStats(proyecto?.nombre || '')
   const { eliminarProyecto } = useProjectOperations()
-  const { invalidateProjects, invalidateProject, invalidateProjectContracts } = useCacheInvalidation()
+  const { invalidateProjects, invalidateProject, invalidateProjectContracts, invalidateProjectStats } = useCacheInvalidation()
   const unlinkContractMutation = useUnlinkContractFromProject()
   const { showToast } = useToast()
   const { currentUser } = useAuth()
@@ -50,6 +50,7 @@ const ProjectDetail: React.FC = () => {
       // Also invalidate the project contracts cache
       if (proyecto?.nombre && usuario?.organizacionId) {
         invalidateProjectContracts(proyecto.nombre, usuario.organizacionId)
+        invalidateProjectStats(proyecto.nombre, usuario.organizacionId)
       }
       setShowContractSelect(false)
       showToast('Contrato agregado al proyecto', 'success')
@@ -117,6 +118,7 @@ const ProjectDetail: React.FC = () => {
     // Also invalidate the project contracts cache
     if (proyecto?.nombre && usuario?.organizacionId) {
       invalidateProjectContracts(proyecto.nombre, usuario.organizacionId)
+      invalidateProjectStats(proyecto.nombre, usuario.organizacionId)
     }
   }
 
@@ -138,6 +140,7 @@ const ProjectDetail: React.FC = () => {
     // Also invalidate the project contracts cache
     if (proyecto?.nombre && usuario?.organizacionId) {
       invalidateProjectContracts(proyecto.nombre, usuario.organizacionId)
+      invalidateProjectStats(proyecto.nombre, usuario.organizacionId)
     }
   }
 
@@ -149,6 +152,7 @@ const ProjectDetail: React.FC = () => {
       // Also invalidate the project contracts cache
       if (proyecto?.nombre && usuario?.organizacionId) {
         invalidateProjectContracts(proyecto.nombre, usuario.organizacionId)
+        invalidateProjectStats(proyecto.nombre, usuario.organizacionId)
       }
     } catch (error) {
       console.error('Error desvinculando contrato del proyecto:', error)
@@ -176,6 +180,41 @@ const ProjectDetail: React.FC = () => {
         </div>
       </div>
     )
+  }
+
+  // Debug logging for project stats
+  console.log('ProjectDetail debug:', {
+    projectId: id,
+    projectName: proyecto?.nombre,
+    organizacionId: usuario?.organizacionId,
+    estadisticas,
+    contratos
+  })
+
+  // Debug the ProjectService call
+  console.log('=== PROJECT STATS DEBUG ===')
+  console.log('Project name for stats:', proyecto?.nombre)
+  console.log('Organization ID:', usuario?.organizacionId)
+  
+  const debugStats = async () => {
+    if (proyecto?.nombre && usuario?.organizacionId) {
+      try {
+        const contracts = await ProjectService.obtenerContratosPorProyecto(proyecto.nombre, usuario.organizacionId)
+        console.log('Raw contracts from service:', contracts)
+        console.log('Contract estados:', contracts.map(c => ({ titulo: c.titulo, estado: c.estado, type: typeof c.estado })))
+        console.log('EstadoContrato.ACTIVO:', EstadoContrato.ACTIVO)
+        console.log('Active contracts:', contracts.filter(c => c.estado === EstadoContrato.ACTIVO))
+        
+        const stats = await ProjectService.calcularEstadisticasProyecto(proyecto.nombre, usuario.organizacionId)
+        console.log('Calculated stats:', stats)
+      } catch (error) {
+        console.error('Debug stats error:', error)
+      }
+    }
+  }
+  
+  if (proyecto?.nombre && usuario?.organizacionId) {
+    debugStats()
   }
 
   const getEstadoColor = (estado: EstadoProyecto): string => {
@@ -370,7 +409,7 @@ const ProjectDetail: React.FC = () => {
               Contratos Finalizados
             </div>
             <div className="mt-1 text-2xl font-bold">
-              {estadisticas?.contratosVencidos || 0}
+              {estadisticas?.contratosFinalizados || 0}
             </div>
           </div>
         </div>

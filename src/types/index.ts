@@ -347,6 +347,7 @@ export interface EstadisticasProyecto {
   contratosActivos: number
   contratosPorVencer: number
   contratosVencidos: number
+  contratosFinalizados: number
   valorTotal: number
   valorActivo: number
   ingresos: number
