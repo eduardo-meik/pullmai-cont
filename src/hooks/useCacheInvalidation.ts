@@ -76,6 +76,11 @@ export const useCacheInvalidation = () => {
     queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.PROJECT, projectId] })
   }, [queryClient])
 
+  // Invalidate project contracts
+  const invalidateProjectContracts = useCallback((projectName: string, organizacionId?: string) => {
+    queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.CONTRACTS, 'project', projectName, organizacionId] })
+  }, [queryClient])
+
   // Invalidate contrapartes data
   const invalidateContrapartes = useCallback((organizacionId?: string) => {
     if (organizacionId) {
@@ -136,6 +141,7 @@ export const useCacheInvalidation = () => {
     invalidateUser,
     invalidateProjects,
     invalidateProject,
+    invalidateProjectContracts,
     invalidateContrapartes,
     invalidateContraparte,
     invalidateAudit,

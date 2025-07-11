@@ -14,6 +14,7 @@ import { useMutation } from '@tanstack/react-query'
 import { contractService } from '../../services/contractService'
 import { ProjectService } from '../../services/projectService'
 import { useAuth } from '../../contexts/AuthContext'
+import { useAuthStore } from '../../stores/authStore'
 import { useCacheInvalidation } from '../../hooks/useCacheInvalidation'
 
 const ProjectDetail: React.FC = () => {
@@ -23,10 +24,11 @@ const ProjectDetail: React.FC = () => {
   const { data: contratos } = useProjectContracts(proyecto?.nombre || '')
   const { data: estadisticas } = useProjectStats(proyecto?.nombre || '')
   const { eliminarProyecto } = useProjectOperations()
-  const { invalidateProjects, invalidateProject } = useCacheInvalidation()
+  const { invalidateProjects, invalidateProject, invalidateProjectContracts } = useCacheInvalidation()
   const unlinkContractMutation = useUnlinkContractFromProject()
   const { showToast } = useToast()
   const { currentUser } = useAuth()
+  const { usuario } = useAuthStore()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
   const [showContractForm, setShowContractForm] = useState(false)
@@ -45,6 +47,10 @@ const ProjectDetail: React.FC = () => {
     onSuccess: async () => {
       invalidateProject(id!)
       invalidateProjects()
+      // Also invalidate the project contracts cache
+      if (proyecto?.nombre && usuario?.organizacionId) {
+        invalidateProjectContracts(proyecto.nombre, usuario.organizacionId)
+      }
       setShowContractSelect(false)
       showToast('Contrato agregado al proyecto', 'success')
     },
@@ -108,6 +114,10 @@ const ProjectDetail: React.FC = () => {
     setShowContractForm(false)
     invalidateProject(id!) // Refresh the project data to show the new contract
     invalidateProjects()
+    // Also invalidate the project contracts cache
+    if (proyecto?.nombre && usuario?.organizacionId) {
+      invalidateProjectContracts(proyecto.nombre, usuario.organizacionId)
+    }
   }
 
   const handleViewContract = (contrato: Contrato) => {
@@ -125,6 +135,10 @@ const ProjectDetail: React.FC = () => {
     setSelectedContract(null)
     invalidateProject(id!) // Refresh the project data to show the updated contract
     invalidateProjects()
+    // Also invalidate the project contracts cache
+    if (proyecto?.nombre && usuario?.organizacionId) {
+      invalidateProjectContracts(proyecto.nombre, usuario.organizacionId)
+    }
   }
 
   const handleDeleteContract = async (contractId: string) => {
@@ -132,6 +146,10 @@ const ProjectDetail: React.FC = () => {
       await unlinkContractMutation.mutateAsync(contractId)
       invalidateProject(id!) // Refresh project/contracts after unlink
       invalidateProjects()
+      // Also invalidate the project contracts cache
+      if (proyecto?.nombre && usuario?.organizacionId) {
+        invalidateProjectContracts(proyecto.nombre, usuario.organizacionId)
+      }
     } catch (error) {
       console.error('Error desvinculando contrato del proyecto:', error)
       // Error toast will be shown by the hook automatically
