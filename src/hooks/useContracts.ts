@@ -73,7 +73,27 @@ export const useCreateContract = () => {
       return { id, ...formulario }
     },
     onSuccess: (data) => {
+      // Invalidate all related caches
       queryClient.invalidateQueries({ queryKey: ['contratos'] })
+      queryClient.invalidateQueries({ queryKey: ['contratos', usuario?.organizacionId] })
+      
+      // Invalidate project-specific caches if contract is associated with a project
+      if (data.proyecto && data.proyecto.trim() !== '') {
+        queryClient.invalidateQueries({ queryKey: ['contratos', 'project', data.proyecto] })
+        queryClient.invalidateQueries({ queryKey: ['project', 'stats', data.proyecto] })
+        queryClient.invalidateQueries({ queryKey: ['projects'] })
+        queryClient.invalidateQueries({ queryKey: ['projects', usuario?.organizacionId] })
+      }
+      
+      // Invalidate organization data to update statistics
+      queryClient.invalidateQueries({ queryKey: ['organization', usuario?.organizacionId] })
+      
+      // Invalidate contrapartes cache if contraparte was auto-created
+      if (data.contraparte && data.contraparte.trim() !== '') {
+        queryClient.invalidateQueries({ queryKey: ['contrapartes'] })
+        queryClient.invalidateQueries({ queryKey: ['contrapartes', usuario?.organizacionId] })
+      }
+      
       showTypedToast('success', 'Contrato creado exitosamente')
     },
     onError: (error: Error) => {
@@ -97,8 +117,29 @@ export const useUpdateContract = () => {
     },
     onSuccess: ({ id, updates }) => {
       updateContrato(id, updates)
+      
+      // Invalidate all related caches
       queryClient.invalidateQueries({ queryKey: ['contratos'] })
+      queryClient.invalidateQueries({ queryKey: ['contratos', usuario?.organizacionId] })
       queryClient.invalidateQueries({ queryKey: ['contrato', id] })
+      
+      // Invalidate project-specific caches if contract is associated with a project
+      if (updates.proyecto && updates.proyecto.trim() !== '') {
+        queryClient.invalidateQueries({ queryKey: ['contratos', 'project', updates.proyecto] })
+        queryClient.invalidateQueries({ queryKey: ['project', 'stats', updates.proyecto] })
+        queryClient.invalidateQueries({ queryKey: ['projects'] })
+        queryClient.invalidateQueries({ queryKey: ['projects', usuario?.organizacionId] })
+      }
+      
+      // Invalidate organization data to update statistics
+      queryClient.invalidateQueries({ queryKey: ['organization', usuario?.organizacionId] })
+      
+      // Invalidate contrapartes cache if contraparte was updated
+      if (updates.contraparte && updates.contraparte.trim() !== '') {
+        queryClient.invalidateQueries({ queryKey: ['contrapartes'] })
+        queryClient.invalidateQueries({ queryKey: ['contrapartes', usuario?.organizacionId] })
+      }
+      
       showTypedToast('success', 'Contrato actualizado exitosamente')
     },
     onError: (error: Error) => {

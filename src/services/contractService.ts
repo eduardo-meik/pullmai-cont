@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from '../firebase'
-import { Contrato, FormularioContrato, FiltrosContrato, RegistroAuditoria, AccionAuditoria } from '../types'
+import { Contrato, FormularioContrato, FiltrosContrato, RegistroAuditoria, AccionAuditoria, EstadoContrato } from '../types'
 import { ContraparteAutoCreationService } from './contraparteAutoCreationService'
 
 // Custom error for contract already linked to another project
@@ -83,7 +83,22 @@ export class ContractService {
       q = query(q, limit(pageSize))
       if (lastDoc) {
         q = query(q, startAfter(lastDoc))
-      }      const snapshot = await getDocs(q)
+      }      
+
+      console.log('🔍 Attempting to fetch contracts with query...')
+      const snapshot = await getDocs(q)
+        .catch(error => {
+          console.error('🚨 Firestore getDocs error:', error)
+          console.error('🔍 Error details:', {
+            code: error.code,
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+          })
+          throw error
+        })
+      
+      console.log('✅ Successfully fetched contracts:', snapshot.size)
       const contratos = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -217,7 +232,7 @@ export class ContractService {
         tipo: formulario.tipo,
         proyecto: formulario.proyecto,
         proyectoId: formulario.proyectoId,
-        estado: 'borrador' as any,
+        estado: EstadoContrato.BORRADOR, // Use proper enum value
         fechaCreacion: new Date(),
         organizacionId,
         departamento: formulario.departamento,

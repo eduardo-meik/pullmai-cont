@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { ContractTemplate, TemplateFormData, AutoFillData } from '../../types/templates';
 import { templateService } from '../../services/templateService';
+import { useAuthStore } from '../../stores/authStore';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 
 interface ContractPreviewProps {
   template: ContractTemplate;
@@ -8,6 +11,7 @@ interface ContractPreviewProps {
   autoFillData?: AutoFillData;
   onSave?: (generatedContent: string) => Promise<void>;
   onDownloadPDF?: (generatedContent: string) => Promise<void>;
+  onSaveAsDraft?: (contractId: string) => void;
 }
 
 export const ContractPreview: React.FC<ContractPreviewProps> = ({
@@ -15,10 +19,13 @@ export const ContractPreview: React.FC<ContractPreviewProps> = ({
   formData,
   autoFillData,
   onSave,
-  onDownloadPDF
+  onDownloadPDF,
+  onSaveAsDraft
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { usuario } = useAuthStore();
+  const { showToast } = useToast();
 
   const generatedContent = templateService.generateContract(template, formData, autoFillData);
 
@@ -32,6 +39,41 @@ export const ContractPreview: React.FC<ContractPreviewProps> = ({
     } catch (err) {
       setError('Error al guardar el contrato');
       console.error('Error saving contract:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveAsDraft = async () => {
+    if (!usuario) {
+      setError('Usuario no autenticado');
+      showToast('Error: Usuario no autenticado', 'error');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Use the createContractFromTemplate method to create a draft contract
+      const contractId = await templateService.createContractFromTemplate(
+        template,
+        formData,
+        autoFillData,
+        usuario.id,
+        usuario.organizacionId
+      );
+
+      showToast('¡Contrato guardado como borrador exitosamente!', 'success');
+
+      if (onSaveAsDraft) {
+        onSaveAsDraft(contractId);
+      }
+    } catch (err) {
+      console.error('Error saving contract as draft:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido al guardar el contrato';
+      setError(errorMessage);
+      showToast('Error al guardar el contrato como borrador', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -174,6 +216,25 @@ export const ContractPreview: React.FC<ContractPreviewProps> = ({
               Guardar
             </button>
           )}
+
+          {/* Save as Draft Button - Always Available */}
+          <button
+            onClick={handleSaveAsDraft}
+            disabled={!isFormComplete || isLoading}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <svg className="w-4 h-4 inline mr-1 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            )}
+            Guardar como Borrador
+          </button>
         </div>
       </div>
 

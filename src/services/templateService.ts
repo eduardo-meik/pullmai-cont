@@ -1,6 +1,8 @@
 import { collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ContractTemplate, TemplateFormData, AutoFillData, GeneratedContract } from '../types/templates';
+import { FormularioContrato, EstadoContrato } from '../types';
+import { TemplateAutoFillService } from './templateAutoFillService';
 
 // Import JSON templates
 import laborTemplate from '../data/contract-templates/labor.json';
@@ -19,6 +21,16 @@ class TemplateService {
     acquisitionTemplate as ContractTemplate,
     consultancyTemplate as ContractTemplate
   ];
+
+  // Cache invalidation callback - can be set by components that need to invalidate caches
+  private onContractCreated?: (contractId: string) => void;
+
+  /**
+   * Set callback for cache invalidation when contracts are created from templates
+   */
+  setOnContractCreatedCallback(callback: (contractId: string) => void) {
+    this.onContractCreated = callback;
+  }
 
   /**
    * Get all available templates (system + organization custom)
@@ -270,6 +282,12 @@ class TemplateService {
       };
 
       const docRef = await addDoc(collection(db, GENERATED_CONTRACTS_COLLECTION), contractData);
+      
+      // Invalidate cache if callback is set
+      if (this.onContractCreated) {
+        this.onContractCreated(docRef.id);
+      }
+      
       return docRef.id;
     } catch (error) {
       console.error('Error saving generated contract:', error);
@@ -306,6 +324,111 @@ class TemplateService {
       console.error('Error fetching generated contracts:', error);
       return [];
     }
+  }
+
+  /**
+   * Create a contract from a template and save it to the contracts collection as a draft
+   */
+  async createContractFromTemplate(
+    template: ContractTemplate,
+    formData: TemplateFormData,
+    autoFillData?: AutoFillData,
+    userId?: string,
+    organizationId?: string
+  ): Promise<string> {
+    try {
+      console.log('Creating contract from template with enhanced auto-fill...');
+      
+      // Use enhanced auto-fill service to prepare form data and create contraparte
+      const { enhancedFormData, contraparteId, monto } = await TemplateAutoFillService.prepareEnhancedFormData(
+        formData,
+        template,
+        organizationId || '',
+        userId || ''
+      );
+      
+      // Generate the contract content using enhanced form data
+      const generatedContent = this.generateContract(template, enhancedFormData, autoFillData);
+      
+      // Extract contract information from enhanced form data
+      const contractTitle = enhancedFormData.titulo || enhancedFormData.contract_title || `Contrato basado en ${template.name}`;
+      const contractDescription = enhancedFormData.descripcion || enhancedFormData.contract_description || `Contrato generado desde plantilla: ${template.name}`;
+      const contraparte = enhancedFormData.contraparte || '';
+      
+      // Set default dates if not provided
+      const fechaInicio = enhancedFormData.fecha_inicio 
+        ? new Date(enhancedFormData.fecha_inicio) 
+        : new Date();
+      
+      const fechaTermino = enhancedFormData.fecha_termino 
+        ? new Date(enhancedFormData.fecha_termino) 
+        : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
+      
+      // Extract financial information (use enhanced monto)
+      const moneda = enhancedFormData.moneda || enhancedFormData.currency || 'CLP';
+      
+      // Map template category to contract category
+      const categoria = this.mapTemplateCategoryToContractCategory(template.category);
+      
+      // Prepare contract data with enhanced auto-fill information
+      const contractData: FormularioContrato = {
+        titulo: contractTitle,
+        descripcion: contractDescription,
+        contraparte,
+        contraparteId: contraparteId || '', // Use the automatically created contraparte ID
+        fechaInicio: fechaInicio.toISOString().split('T')[0], // Convert to string format
+        fechaTermino: fechaTermino.toISOString().split('T')[0], // Convert to string format
+        monto: Number(monto), // Use the extracted monto from enhanced auto-fill
+        moneda,
+        categoria: categoria as any, // Cast to match FormularioContrato type
+        periodicidad: enhancedFormData.periodicidad || 'UNICO',
+        tipo: enhancedFormData.tipo || 'EGRESO',
+        proyecto: enhancedFormData.proyecto || '',
+        proyectoId: enhancedFormData.proyectoId || '',
+        estado: EstadoContrato.BORRADOR, // Use proper enum value
+        departamento: enhancedFormData.departamento || '',
+        etiquetas: enhancedFormData.etiquetas || []
+      };
+
+      console.log('Creating contract with enhanced data:', {
+        contraparteId,
+        monto,
+        contraparte,
+        titulo: contractTitle
+      });
+
+      // Import contractService to create the contract
+      const { contractService } = await import('./contractService');
+      const contractId = await contractService.crearContrato(contractData, organizationId || '', userId || '');
+      
+      // Trigger cache invalidation callback if set
+      if (this.onContractCreated) {
+        this.onContractCreated(contractId);
+      }
+      
+      return contractId;
+    } catch (error) {
+      console.error('Error creating contract from template:', error);
+      throw new Error('Error al crear el contrato desde la plantilla');
+    }
+  }
+
+  /**
+   * Map template category to contract category
+   */
+  private mapTemplateCategoryToContractCategory(templateCategory: string): string {
+    const categoryMap: { [key: string]: string } = {
+      'laboral': 'LABORAL',
+      'servicios': 'SERVICIOS',
+      'adquisicion': 'COMPRAS',
+      'consultoria': 'CONSULTORIA',
+      'arrendamiento': 'ARRENDAMIENTO',
+      'confidencialidad': 'CONFIDENCIALIDAD',
+      'mantenimiento': 'MANTENIMIENTO',
+      'suministro': 'SUMINISTRO'
+    };
+    
+    return categoryMap[templateCategory.toLowerCase()] || 'OTRO';
   }
 
   /**

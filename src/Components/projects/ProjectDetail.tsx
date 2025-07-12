@@ -10,6 +10,7 @@ import { useToast } from '../../contexts/ToastContext'
 import ContractSelectModal from '../contracts/ContractSelectModal'
 import ContractForm from '../contracts/ContractForm'
 import ProjectForm from './ProjectForm'
+import FirebaseConnectionTest from '../debug/FirebaseConnectionTest'
 import { useMutation } from '@tanstack/react-query'
 import { contractService } from '../../services/contractService'
 import { ProjectService } from '../../services/projectService'
@@ -266,6 +267,9 @@ const ProjectDetail: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Firebase Connection Test - Remove after debugging */}
+      <FirebaseConnectionTest />
+      
       {/* Breadcrumb */}
       <nav className="flex" aria-label="Breadcrumb">
         <ol className="flex items-center space-x-2 text-sm">

@@ -153,4 +153,83 @@ export class ContraparteAutoCreationService {
       // Don't throw error here - contract creation should not fail if linking fails
     }
   }
+  
+  /**
+   * Enhanced contraparte creation with additional fields
+   */
+  static async createEnhancedContraparte(
+    nombre: string,
+    createdByUserId: string,
+    additionalData: {
+      rut?: string;
+      direccion?: string;
+      email?: string;
+      telefono?: string;
+      personaContacto?: string;
+      tipoEntidad?: 'empresa' | 'persona_natural';
+    } = {}
+  ): Promise<string> {
+    try {
+      if (!nombre || nombre.trim() === '') {
+        throw new Error('El nombre de la contraparte es requerido')
+      }
+
+      // Check if contraparte already exists
+      const existingOrg = await this.findContraparteByName(nombre);
+      if (existingOrg) {
+        return existingOrg.id;
+      }
+
+      // Create default configuration for contraparte organization
+      const defaultConfig: ConfiguracionOrg = {
+        tiposContratoPermitidos: [TipoContrato.SERVICIO, TipoContrato.COMPRA],
+        flujoAprobacion: false,
+        notificacionesEmail: true,
+        retencionDocumentos: 365,
+        plantillasPersonalizadas: false
+      }
+
+      // Create enhanced organization data
+      const organizacionData: Omit<Organizacion, 'id'> = {
+        nombre: nombre.trim(),
+        rut: additionalData.rut || '',
+        direccion: additionalData.direccion || '',
+        email: additionalData.email || '',
+        telefono: additionalData.telefono || '',
+        descripcion: `Organización contraparte creada automáticamente para ${nombre}`,
+        configuracion: defaultConfig,
+        fechaCreacion: new Date(),
+        activa: true
+      }
+
+      // Create the organization
+      const organizacionesRef = collection(db, 'organizaciones');
+      const docRef = await addDoc(organizacionesRef, organizacionData);
+
+      // Also create a contraparte record for easier access
+      const contraparteData = {
+        organizacionId: docRef.id,
+        nombre: nombre.trim(),
+        rut: additionalData.rut || '',
+        direccion: additionalData.direccion || '',
+        email: additionalData.email || '',
+        telefono: additionalData.telefono || '',
+        personaContacto: additionalData.personaContacto || '',
+        tipoEntidad: additionalData.tipoEntidad || 'empresa',
+        fechaCreacion: new Date(),
+        creadoPor: createdByUserId,
+        activo: true
+      };
+
+      const contrapartesRef = collection(db, 'contrapartes');
+      await addDoc(contrapartesRef, contraparteData);
+
+      console.log('Enhanced contraparte created:', docRef.id);
+      return docRef.id;
+
+    } catch (error) {
+      console.error('Error creating enhanced contraparte:', error);
+      throw error;
+    }
+  }
 }

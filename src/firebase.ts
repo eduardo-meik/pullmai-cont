@@ -46,11 +46,17 @@ console.log('Project ID:', firebaseConfig.projectId)
 console.log('Auth Domain:', firebaseConfig.authDomain)
 
 // Initialize Firebase
+console.log('🚀 Initializing Firebase app with project:', firebaseConfig.projectId)
 const app = initializeApp(firebaseConfig)
 
-// Initialize Firebase services
+// Initialize Firebase services with error handling
 export const db = getFirestore(app)
 export const storage = getStorage(app)
 export const auth = getAuth(app)
+
+// Log successful initialization
+console.log('✅ Firebase services initialized successfully')
+console.log('� App name:', app.name)
+console.log('🆔 Project ID from config:', firebaseConfig.projectId)
 
 export default app

@@ -5,6 +5,7 @@ import { ContractPreview } from './ContractPreview';
 import { ContractTemplate, TemplateFormData, AutoFillData } from '../../types/templates';
 import { templateService } from '../../services/templateService';
 import { useAuthStore } from '../../stores/authStore';
+import { useToast } from '../../contexts/ToastContext';
 
 interface ContraparteData {
   id: string;
@@ -44,6 +45,7 @@ export const ContractGenerator: React.FC<ContractGeneratorProps> = ({
   className = ''
 }) => {
   const { usuario } = useAuthStore();
+  const { showToast } = useToast();
   const [currentStep, setCurrentStep] = useState<'template' | 'form' | 'preview'>('template');
   const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
   const [formData, setFormData] = useState<TemplateFormData>({});
@@ -113,19 +115,27 @@ export const ContractGenerator: React.FC<ContractGeneratorProps> = ({
 
     try {
       setIsLoading(true);
-      const contractId = await templateService.saveGeneratedContract(
-        selectedTemplate.id,
-        selectedTemplate.name,
+      setError(null);
+      
+      // Use the createContractFromTemplate method to create a draft contract
+      const contractId = await templateService.createContractFromTemplate(
+        selectedTemplate,
         formData,
-        generatedContent,
-        usuario.organizacionId,
-        usuario.id
+        autoFillData,
+        usuario.id,
+        usuario.organizacionId
       );
+
+      showToast('¡Contrato guardado como borrador exitosamente!', 'success');
 
       if (onContractSaved) {
         onContractSaved(contractId);
       }
     } catch (err) {
+      console.error('Error saving contract:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido al guardar el contrato';
+      setError(errorMessage);
+      showToast('Error al guardar el contrato', 'error');
       throw err;
     } finally {
       setIsLoading(false);
@@ -317,6 +327,7 @@ export const ContractGenerator: React.FC<ContractGeneratorProps> = ({
               autoFillData={autoFillData}
               onSave={handleSaveContract}
               onDownloadPDF={handleDownloadPDF}
+              onSaveAsDraft={onContractSaved}
             />
           </div>
         )}

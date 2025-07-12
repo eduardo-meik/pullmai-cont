@@ -5,6 +5,9 @@ import { ContractTemplate } from '../../types/templates';
 import { useAuthStore } from '../../stores/authStore';
 import { OrganizacionService } from '../../services/organizacionService';
 import { Organizacion, UserRole } from '../../types';
+import { useToast } from '../../contexts/ToastContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { useTemplateContractCache } from '../../hooks/useTemplateContractCache';
 import {
   DocumentTextIcon,
   DocumentDuplicateIcon,
@@ -21,6 +24,9 @@ const PlantillaModule: React.FC = () => {
   const [organizationData, setOrganizationData] = useState<Organizacion | null>(null);
   const [isLoadingOrg, setIsLoadingOrg] = useState(false);
   const { usuario } = useAuthStore();
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
+  const { invalidateTemplateContractCaches } = useTemplateContractCache();
 
   // Load organization data by default
   useEffect(() => {
@@ -46,9 +52,14 @@ const PlantillaModule: React.FC = () => {
                             usuario?.rol === UserRole.MANAGER;
 
   const handleContractSaved = (contractId: string) => {
-    // Handle successful contract save - could navigate to contracts module
     console.log('Contract saved with ID:', contractId);
-    // You might want to show a success toast or navigate somewhere
+    
+    // Use the dedicated hook for cache invalidation
+    invalidateTemplateContractCaches(contractId);
+    
+    showToast('¡Contrato creado exitosamente como borrador!', 'success');
+    // You might want to navigate to the contracts module or show additional info
+    // For example: navigate('/contratos?highlight=' + contractId);
   };
 
   const renderTabButtons = () => (
